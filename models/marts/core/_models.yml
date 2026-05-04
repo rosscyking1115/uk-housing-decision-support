@@ -39,6 +39,9 @@ models:
         description: Postcode area, leading 1-2 letters (e.g. 'SW').
         tests:
           - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:
+                regex: '^[A-Z]{1,2}$'
       - name: region
         description: ONS region or 'Unknown'.
         tests:
@@ -94,6 +97,11 @@ models:
       Grain: one row per Land Registry transaction.
     config:
       materialized: table
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          arguments:
+            min_value: 1000000
+            max_value: 10000000
     columns:
       - name: transaction_key
         description: Surrogate key — sha256(transaction_id). Stable across schema changes.
@@ -141,6 +149,15 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: "> 0"
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 100000000
+          - dbt_expectations.expect_column_quantile_values_to_be_between:
+              arguments:
+                quantile: 0.5
+                min_value: 50000
+                max_value: 2000000
       - name: is_new_build
         description: TRUE if newly built, FALSE if existing.
         tests:
@@ -151,14 +168,43 @@ models:
           - not_null
       - name: transferred_year
         description: Year of transfer, integer.
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 2021
+                max_value: 2025
       - name: transferred_month
         description: Month of transfer (1-12), integer.
       - name: region
         description: ONS region (denormalised from postcode_key).
         tests:
           - not_null
+          # All 10 ONS regions of England + Wales must be PRESENT in the
+          # data. _to_contain_set ensures the 10 are all there but allows
+          # 'Unknown' (and any future extras) without false-positives.
+          # _to_equal:10 was wrong — the data has 11 distinct values
+          # (10 + 'Unknown' for postcodes that don't match the seed).
+          - dbt_expectations.expect_column_distinct_values_to_contain_set:
+              arguments:
+                value_set:
+                  - London
+                  - North East
+                  - North West
+                  - Yorkshire and the Humber
+                  - East Midlands
+                  - West Midlands
+                  - East of England
+                  - South East
+                  - South West
+                  - Wales
       - name: postcode
         description: Full postcode at sale (denormalised).
+        tests:
+          - dbt_expectations.expect_column_value_lengths_to_be_between:
+              arguments:
+                min_value: 5
+                max_value: 8
+                row_condition: "postcode is not null"
       - name: postcode_area
         description: Postcode area (denormalised).
       - name: town_city
