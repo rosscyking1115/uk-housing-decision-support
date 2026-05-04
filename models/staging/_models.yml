@@ -26,7 +26,8 @@ models:
         tests:
           - not_null
           - dbt_utils.expression_is_true:
-              expression: "> 0"
+              arguments:
+                expression: "> 0"
 
       - name: transferred_on
         description: Calendar date of the property transfer (date, not timestamp).
@@ -46,15 +47,17 @@ models:
           Note: F means 'flat' here, NOT 'freehold' — that's `tenure_code`.
         tests:
           - accepted_values:
-              values: ['D', 'S', 'T', 'F', 'O']
-              quote: true
+              arguments:
+                values: ['D', 'S', 'T', 'F', 'O']
+                quote: true
 
       - name: is_new_build_flag
         description: Y if newly built, N if existing. (Kept as raw flag; boolean conversion happens in the fact model.)
         tests:
           - accepted_values:
-              values: ['Y', 'N']
-              quote: true
+              arguments:
+                values: ['Y', 'N']
+                quote: true
 
       - name: tenure_code
         description: |
@@ -62,8 +65,9 @@ models:
           dim_tenure (Phase 3).
         tests:
           - accepted_values:
-              values: ['F', 'L', 'U']
-              quote: true
+              arguments:
+                values: ['F', 'L', 'U']
+                quote: true
 
       - name: primary_address
         description: PAON — primary addressable object name (e.g. house number).
@@ -88,7 +92,8 @@ models:
           building.
         tests:
           - accepted_values:
-              values: ['standard', 'additional']
+              arguments:
+                values: ['standard', 'additional']
 
       - name: record_status
         description: |
@@ -97,8 +102,9 @@ models:
           transaction_id.
         tests:
           - accepted_values:
-              values: ['A', 'C', 'D']
-              quote: true
+              arguments:
+                values: ['A', 'C', 'D']
+                quote: true
 
       - name: _loaded_at
         description: UTC timestamp when the row was written into the warehouse by load_to_duckdb.py.
