@@ -23,7 +23,7 @@ over fragmented official UK datasets.
 
 - 📊 **dbt docs site (lineage + column catalogue):** https://rosscyking1115.github.io/uk-housing-decision-support/
 - 📈 **Streamlit dashboard (legacy market-study UI):** https://ross-uk-property-analytics.streamlit.app/
-- ✅ **CI status:** [![CI](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml) — every PR runs Python unit tests, Streamlit render/browser smoke tests, source freshness, `dbt build`, 154 data tests, dashboard extract smoke tests, and sqlfluff lint. Branch protection on `main` requires the check to pass before merging.
+- ✅ **CI status:** [![CI](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml) — every PR runs Python unit tests, Streamlit render/browser smoke tests, source freshness, `dbt build`, 157 data tests, dashboard extract smoke tests, and sqlfluff lint. Branch protection on `main` requires the check to pass before merging.
 
 ## Project status
 
@@ -93,10 +93,10 @@ flowchart LR
 |---|---|---|
 | Warehouse | **DuckDB** | Free, zero-ops, single-file, runs in CI. The whole 5-year warehouse fits in ~200 MB; queries return in milliseconds. |
 | Transform | **dbt-core 1.11** + **dbt-duckdb 1.10** | Industry-standard analytics-engineering tooling, declared grains, tested marts, lineage. |
-| Tests | **Built-in** + **dbt-utils** + **dbt-expectations** + **singular** | Row-shape, value-shape, and named-hypothesis tests. 154 data tests + 1 source-freshness check. |
+| Tests | **Built-in** + **dbt-utils** + **dbt-expectations** + **singular** | Row-shape, value-shape, and named-hypothesis tests. 157 data tests + 1 source-freshness check. |
 | Docs | `dbt docs` → **GitHub Pages** | Free hosting, lineage graph, column-level catalogue (`.github/workflows/docs.yml`). |
 | App | **Streamlit** | Python-native, read-only DuckDB connection, free Community Cloud hosting. The renter-facing decision workflow (Phase 5) will replace the current chart dashboard. |
-| CI | **GitHub Actions** | `ci.yml` runs unit tests, Streamlit smoke tests, source freshness, `dbt build`, 154 data tests, dashboard extract smoke, and sqlfluff lint on every PR. `docs.yml` publishes dbt docs to Pages. Branch protection on `main` gates merges. |
+| CI | **GitHub Actions** | `ci.yml` runs unit tests, Streamlit smoke tests, source freshness, `dbt build`, 157 data tests, dashboard extract smoke, and sqlfluff lint on every PR. `docs.yml` publishes dbt docs to Pages. Branch protection on `main` gates merges. |
 | Lint | **sqlfluff 4.1** + dbt templater | Wired via `pre-commit` (local) and as a hard CI gate. |
 
 `requirements.txt` pins are verified against PyPI for Python 3.13 (`cp313`) wheels
@@ -111,7 +111,7 @@ so a fresh clone needs no source builds — which matters on Windows.
 | `dbt-utils` (`expression_is_true`, `unique_combination_of_columns`) | 8 | Sign / range invariants, multi-column uniqueness |
 | `dbt-expectations` (range, regex, length, distinct, quantile, row count) | 7 | Type-cast bugs, statistical drift, format regressions |
 | Singular (`tests/assert_*.sql`) | 12 | Domain anomalies — non-vacuous YoY, date-spine coverage, area-profile market-match and source-caveat guards |
-| **Total** | **154** | All passing on every `dbt build`; source freshness is a separate CI gate |
+| **Total** | **157** | All passing on every `dbt build`; source freshness is a separate CI gate |
 
 ## Geography contract (current limitation)
 
@@ -156,7 +156,7 @@ dbt seed
 dbt build
 ```
 
-A fresh clone reproduces the full warehouse + 154 data tests in under 5 minutes
+A fresh clone reproduces the full warehouse + 157 data tests in under 5 minutes
 on a laptop. To re-publish docs locally: `dbt docs generate && dbt docs serve`.
 
 ## Roadmap

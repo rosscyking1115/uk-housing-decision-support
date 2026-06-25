@@ -24,6 +24,10 @@ clean-targets:
 vars:
   landreg_start_year: 2021
   landreg_end_year: 2025
+  # Decision-support: minimum latest-year sales for an area's median sale price
+  # to be treated as reliable rather than indicative. Guards small-sample
+  # medians (e.g. a £13M area median derived from 2 prime-central sales).
+  min_reliable_sale_sample: 5
 
 # Default model materialisations by folder.
 # - staging: views (cheap, recompute on every run)

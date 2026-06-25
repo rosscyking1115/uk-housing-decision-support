@@ -39,6 +39,16 @@ select
     latest_market.median_sale_price_gbp,
     coalesce(latest_market.sales_count_latest_year, 0)
         as sales_count_latest_year,
+    -- Sample-depth confidence for the median: a median over a handful of
+    -- transactions is an outlier magnet (prime-central areas can show a £13M
+    -- median from 2 sales). Flag it instead of presenting it as fact.
+    case
+        when coalesce(latest_market.sales_count_latest_year, 0) = 0 then 'none'
+        when
+            latest_market.sales_count_latest_year
+            < {{ var('min_reliable_sale_sample') }} then 'indicative'
+        else 'reliable'
+    end as median_sale_price_confidence,
     cast(null as numeric) as official_rent_monthly_gbp,
     cast(null as varchar) as rent_source_grain,
     cast(null as numeric) as affordability_ratio,
@@ -53,17 +63,32 @@ select
         'rent, EPC, crime, flood, planning, and commute sources not loaded yet.'
     ) as confidence_notes,
     case
-        when coalesce(latest_market.sales_count_latest_year, 0) > 0
+        when coalesce(latest_market.sales_count_latest_year, 0) = 0
             then concat(
                 area.area_name,
-                ' has Land Registry sale context for ',
+                ' is present in the geography lookup fixture, ',
+                'but has no matched latest-year sale context yet.'
+            )
+        when
+            latest_market.sales_count_latest_year
+            < {{ var('min_reliable_sale_sample') }}
+            then concat(
+                area.area_name,
+                ' has only ',
+                latest_market.sales_count_latest_year,
+                ' matched ',
                 {{ var('landreg_end_year') }},
-                ', but recommendation scoring is not active yet.'
+                ' sales, so its median is indicative only; ',
+                'recommendation scoring is not active yet.'
             )
         else concat(
             area.area_name,
-            ' is present in the geography lookup fixture, ',
-            'but has no matched latest-year sale context yet.'
+            ' has ',
+            latest_market.sales_count_latest_year,
+            ' matched ',
+            {{ var('landreg_end_year') }},
+            ' sales of Land Registry context, ',
+            'but recommendation scoring is not active yet.'
         )
     end as why_this_area
 from {{ ref('dim_area') }} as area

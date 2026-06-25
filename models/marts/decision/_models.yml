@@ -36,6 +36,15 @@ models:
           - dbt_utils.expression_is_true:
               arguments:
                 expression: ">= 0"
+      - name: median_sale_price_confidence
+        description: >
+          Sample-depth confidence for the median sale price: none (no matched
+          sales), indicative (below min_reliable_sale_sample), or reliable.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['none', 'indicative', 'reliable']
       - name: flood_risk_flag
         description: Placeholder until flood data is loaded.
         tests:
