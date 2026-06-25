@@ -8,7 +8,7 @@ st.title("📊 About this project")
 
 st.markdown(
     """
-**uk-property-analytics** is an analytics-engineering portfolio piece — a
+**uk-housing-decision-support** is an analytics-engineering portfolio piece — a
 5-year UK housing market study built on HM Land Registry Price Paid data
 (every recorded property transaction in England & Wales, 2021–2025).
 
@@ -20,8 +20,8 @@ and the lineage graph is published to GitHub Pages.
 
 ### Live links
 
-- 📊 [**Live dbt docs (lineage + column catalogue)**](https://rosscyking1115.github.io/uk-property-analytics/)
-- 💻 [**GitHub repo**](https://github.com/rosscyking1115/uk-property-analytics)
+- 📊 [**Live dbt docs (lineage + column catalogue)**](https://rosscyking1115.github.io/uk-housing-decision-support/)
+- 💻 [**GitHub repo**](https://github.com/rosscyking1115/uk-housing-decision-support)
 
 ### Tech stack
 

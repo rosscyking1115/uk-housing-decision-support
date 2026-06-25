@@ -50,8 +50,8 @@ st.markdown(
 )
 st.markdown(
     "📊 **[Live dbt docs (lineage + column catalogue)]"
-    "(https://rosscyking1115.github.io/uk-property-analytics/)** · "
-    "💻 **[GitHub repo](https://github.com/rosscyking1115/uk-property-analytics)**"
+    "(https://rosscyking1115.github.io/uk-housing-decision-support/)** · "
+    "💻 **[GitHub repo](https://github.com/rosscyking1115/uk-housing-decision-support)**"
 )
 
 # -------------------------------------------------------------------- KPI row
@@ -128,7 +128,7 @@ fig1.update_yaxes(tickprefix="£", tickformat=",")
 st.plotly_chart(fig1, width="stretch")
 st.caption(
     "Source: `rpt_price_yoy_by_region` — see "
-    "[lineage](https://rosscyking1115.github.io/uk-property-analytics/#!/model/model.uk_property_analytics.rpt_price_yoy_by_region). "
+    "[lineage](https://rosscyking1115.github.io/uk-housing-decision-support/#!/model/model.uk_property_analytics.rpt_price_yoy_by_region). "
     "Deep dive on the [Price YoY page](./Price_YoY_by_region)."
 )
 

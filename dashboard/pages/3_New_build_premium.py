@@ -91,5 +91,5 @@ with tab3:
 
 st.caption(
     "Source: `models/marts/analytics/rpt_new_build_premium.sql` · "
-    "[Lineage on dbt docs](https://rosscyking1115.github.io/uk-property-analytics/)"
+    "[Lineage on dbt docs](https://rosscyking1115.github.io/uk-housing-decision-support/)"
 )

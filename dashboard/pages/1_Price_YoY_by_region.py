@@ -87,5 +87,5 @@ with tab3:
 
 st.caption(
     "Source: `models/marts/analytics/rpt_price_yoy_by_region.sql` · "
-    "[Lineage on dbt docs](https://rosscyking1115.github.io/uk-property-analytics/)"
+    "[Lineage on dbt docs](https://rosscyking1115.github.io/uk-housing-decision-support/)"
 )
