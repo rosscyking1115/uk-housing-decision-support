@@ -35,8 +35,9 @@ over fragmented official UK datasets.
 | `rpt_area_profile_mvp` (first decision mart) | ✅ Prototype | Land Registry sale context + ONS rent + affordability; caveated null placeholders for the rest |
 | ONS rent + affordability | ✅ Built | PIPR local-authority rent (May 2026) on **7,262/7,264 (100%)** of E&W MSOAs; affordability ratio vs a default income scenario |
 | EPC energy profile | ✅ Built | 23.5M England & Wales certificates → per-area median EPC band + certificate count on **100%** of MSOAs (median band D); committed fixture is the CI default, real bulk via `--vars 'epc_source: bulk'` |
-| Crime safety indicator | 🟡 Scaffolded | Pipeline + fixture-tested LSOA→MSOA crime rate (approx. monthly per 1,000, indicator only); real police bulk pending a form download, then `--vars 'crime_source: bulk'` |
-| Flood, planning, commute layers | ⬜ Planned | Designed in the build plan; not loaded |
+| Crime safety indicator | ✅ Built | 17.1M police street-crimes (LSOA→MSOA) → approx. monthly rate per 1,000 on **99.6%** of MSOAs (median ~6.6, indicator only — never a safe/unsafe label); committed fixture is the CI default, real bulk via `--vars 'crime_source: bulk'` |
+| Flood + planning constraints | ⬜ Planned | Spatial (MSOA boundaries × planning.data.gov.uk constraint/flood-zone geometries); next |
+| Commute layer | ⬜ Planned | Designed in the build plan; not loaded |
 | Explainable weighted neighbourhood score | ⬜ Planned | Phase 4 — component scores, confidence, "why this area" |
 | Renter-facing decision app (replacing the chart dashboard) | ⬜ Planned | Phase 5 — search, ranking, compare, source/caveat views |
 
@@ -188,7 +189,7 @@ The phased plan lives in [`HOUSING_DECISION_SUPPORT_BUILD_PLAN.md`](HOUSING_DECI
 
 1. **Spine hardening** — ✅ done (this pivot).
 2. **Geography foundation** — ✅ done: real ONSPD snapshot, 99.999% Land Registry coverage, decision marts keyed on `area_id`, readable names.
-3. **MVP data sources** — ONS rent ✅ done (PIPR local-authority rent + affordability); EPC energy ✅ done (23.5M certificates → per-area median band); crime 🟡 scaffolded (LSOA→MSOA indicator, fixture-tested, real bulk pending download); flood/planning, commute next, one tested ingestion + staging model per source.
+3. **MVP data sources** — ONS rent ✅ done (PIPR local-authority rent + affordability); EPC energy ✅ done (23.5M certificates → per-area median band); crime ✅ done (17.1M police crimes → LSOA→MSOA indicator); flood/planning (spatial), commute next, one tested ingestion + staging model per source.
 4. **Decision marts** — explainable component scores, confidence/coverage fields, "why this area" fragments; user weights re-rank without changing raw facts.
 5. **Renter-facing app** — search/preferences, ranked areas, compare, per-area "trade-off receipt", source/caveat views.
 6. **Quality gates** — score-bound, coverage, and explanation-completeness tests; UI accessibility review.
@@ -212,11 +213,9 @@ Loaded:
 - [ONS Price Index of Private Rents](https://www.ons.gov.uk/economy/inflationandpriceindices/datasets/priceindexofprivaterentsukmonthlypricestatistics) — local-authority average monthly rent. Values may be provisional and revised.
 - [Energy Performance Certificates](https://get-energy-performance-data.communities.gov.uk/) — per-area median EPC band from 23.5M domestic certificates. Bulk download needs a free GOV.UK One Login; then `python scripts/prepare_epc_seed.py <download>`, `python scripts/load_epc.py`, `dbt build --vars 'epc_source: bulk'`. Certificates may be expired or superseded.
 
-Scaffolded (pipeline + fixture in place, real data pending):
+- [Police street-level crime](https://data.police.uk/data/) — per-area approximate monthly crime rate per 1,000 (LSOA→MSOA) from 17.1M crimes, as a measured indicator only, never a safe/unsafe label. Generate a bulk archive (no login), then `python scripts/prepare_crime_seed.py <download>`, `python scripts/load_crime.py`, `dbt build --vars 'crime_source: bulk'`.
 
-- [Police street-level crime](https://data.police.uk/data/) — per-area approximate monthly crime rate per 1,000 (LSOA→MSOA), as a measured indicator only, never a safe/unsafe label. Generate a bulk archive (no login), then `python scripts/prepare_crime_seed.py <download>`, `python scripts/load_crime.py`, `dbt build --vars 'crime_source: bulk'`.
-
-Planned (Planning Data API, Environment Agency flood data, TfL,
+Planned (planning.data.gov.uk constraints + flood-risk-zone, TfL,
 OpenStreetMap) and their licences/caveats are catalogued in
 [`HOUSING_DECISION_SUPPORT_DATA_SOURCES.md`](HOUSING_DECISION_SUPPORT_DATA_SOURCES.md).
 
