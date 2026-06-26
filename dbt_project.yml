@@ -67,6 +67,15 @@ vars:
   amenities_source: 'fixture'
   # Walking radius (km) for the walkable_amenity_count convenience measure.
   walkable_radius_km: 1.0
+  # Default component weights for rpt_neighbourhood_score's overall_score. These
+  # are the neutral defaults baked into the mart; the app re-weights per user
+  # from the stored component scores without changing them. Any non-negative
+  # numbers work (they are normalised over the components an area actually has).
+  score_weight_affordability: 1.0
+  score_weight_safety: 1.0
+  score_weight_energy: 1.0
+  score_weight_flood: 1.0
+  score_weight_convenience: 1.0
 
 # Default model materialisations by folder.
 # - staging: views (cheap, recompute on every run)

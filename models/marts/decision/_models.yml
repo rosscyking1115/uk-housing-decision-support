@@ -148,3 +148,80 @@ models:
         description: Short explainability text for the current prototype area profile.
         tests:
           - not_null
+
+  - name: rpt_neighbourhood_score
+    description: |
+      Explainable neighbourhood scoring (Phase 4). One row per MSOA. Each
+      component is a 0-100 percentile score across all areas (higher = better)
+      derived from rpt_area_profile_mvp; overall_score is the weighted average of
+      the components an area has (default weights from vars, re-weighted per user
+      by the app). Missing components lower confidence and are dropped from the
+      average rather than scored zero.
+    columns:
+      - name: area_id
+        description: MSOA key.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_area')
+                field: area_id
+      - name: affordability_score
+        description: 0-100 (higher = more affordable). Null when rent is missing.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: safety_score
+        description: 0-100 (higher = lower recorded crime). Null when crime is missing.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: energy_score
+        description: 0-100 (higher = better EPC band). Null when EPC is missing.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: flood_score
+        description: 0-100 (higher = lower flood exposure). Null when flood is missing.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: convenience_score
+        description: 0-100 (higher = more walkable essentials + closer station).
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: overall_score
+        description: Weighted average of available component scores, 0-100.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 100"
+      - name: overall_rank
+        description: Dense rank by overall_score (1 = best) across all areas.
+        tests:
+          - not_null
+      - name: components_available
+        description: Count of non-null component scores (0-5).
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "between 0 and 5"
+      - name: confidence_level
+        description: high (5 components), medium (3-4), or low (<3).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['high', 'medium', 'low']
+      - name: why_this_area
+        description: Strongest/weakest component summary plus coverage.
+        tests:
+          - not_null
