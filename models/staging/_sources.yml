@@ -117,3 +117,21 @@ sources:
           One row per certificate, shaped to the energy contract (same columns
           as ref_epc_sample): postcode, current_energy_rating,
           current_energy_efficiency, property_type, lodgement_date.
+
+  - name: police
+    description: |
+      Street-level crime for England & Wales (data.police.uk), keyed by 2021
+      LSOA. Loaded by scripts/load_crime.py from a local bulk archive prepared
+      with scripts/prepare_crime_seed.py. Only present (and only read) when
+      building with `--vars 'crime_source: bulk'`; the committed ref_crime_sample
+      seed is the CI fixture for the default build.
+
+      Source: https://data.police.uk/data/  (Open Government Licence v3.0)
+      Indicators only — never labelled "safe"/"unsafe".
+    schema: raw_police
+    loader: scripts/load_crime.py
+    tables:
+      - name: street_crime
+        description: |
+          One row per recorded crime, shaped to the crime contract (same columns
+          as ref_crime_sample): lsoa_code, crime_type, month.

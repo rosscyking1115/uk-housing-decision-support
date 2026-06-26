@@ -75,6 +75,20 @@ models:
         description: >
           Number of EPC certificates matched to the area — confidence indicator
           for epc_median_rating. Null when none matched.
+      - name: crime_rate_per_1000
+        description: >
+          Approximate monthly recorded crimes per 1,000 residents (police
+          street-level crimes / months observed / nominal_msoa_population *
+          1000). An indicator, never a safe/unsafe label. Null when no crime
+          matched the area.
+        tests:
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: ">= 0"
+      - name: crime_record_count
+        description: >
+          Total police street-level crimes matched to the area over the loaded
+          period — confidence indicator for crime_rate_per_1000. Null when none.
       - name: flood_risk_flag
         description: Placeholder until flood data is loaded.
         tests:

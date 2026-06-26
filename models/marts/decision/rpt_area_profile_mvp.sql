@@ -8,10 +8,10 @@
 -- Grain: one row per MSOA area_id.
 --
 -- This profile exposes Land Registry sale context, ONS local-authority rent
--- (with an affordability ratio), and an EPC energy-efficiency profile, plus
--- null/caveated placeholders for the layers still to come. That keeps the
--- product honest: no crime, flood, planning, or commute claims are made before
--- those sources exist.
+-- (with an affordability ratio), an EPC energy-efficiency profile, and a police
+-- street-crime indicator, plus null/caveated placeholders for the layers still
+-- to come. That keeps the product honest: no flood, planning, or commute claims
+-- are made before those sources exist.
 
 with latest_market as (
 
@@ -43,6 +43,29 @@ area_energy as (
         on epc.postcode = dpg.postcode
     where dpg.area_id is not null
     group by dpg.area_id
+
+),
+
+lsoa_to_area as (
+
+    select distinct
+        lsoa_code,
+        area_id
+    from {{ ref('dim_postcode_geography') }}
+    where area_id is not null and lsoa_code is not null
+
+),
+
+area_crime as (
+
+    select
+        l.area_id,
+        count(*) as crime_record_count,
+        count(distinct c.crime_month) as crime_months_observed
+    from {{ ref('stg_crime__street') }} as c
+    inner join lsoa_to_area as l
+        on c.lsoa_code = l.lsoa_code
+    group by l.area_id
 
 )
 
@@ -79,7 +102,12 @@ select
         when area_energy.epc_median_efficiency >= 1 then 'G'
     end as epc_median_rating,
     area_energy.epc_certificate_count,
-    cast(null as numeric) as crime_rate_per_1000,
+    round(
+        (area_crime.crime_record_count / area_crime.crime_months_observed)
+        / {{ var('nominal_msoa_population') }} * 1000,
+        2
+    ) as crime_rate_per_1000,
+    area_crime.crime_record_count,
     'unknown' as flood_risk_flag,
     0 as planning_constraint_count,
     cast(null as numeric) as commute_minutes_sample,
@@ -92,7 +120,12 @@ select
                 then ', EPC energy'
             else ''
         end,
-        '. Not yet loaded: crime, flood, planning, commute.'
+        case
+            when area_crime.crime_record_count is not null
+                then ', police crime'
+            else ''
+        end,
+        '. Not yet loaded: flood, planning, commute.'
     ) as confidence_notes,
     case
         when coalesce(latest_market.sales_count_latest_year, 0) = 0
@@ -130,4 +163,6 @@ left join {{ ref('ref_ons_rent') }} as rent
     on area.local_authority_code = rent.area_code
 left join area_energy
     on area.area_id = area_energy.area_id
+left join area_crime
+    on area.area_id = area_crime.area_id
 order by area.region, area.local_authority_name, area.area_name
