@@ -80,7 +80,19 @@ normalisation + clean 404s for out-of-scope (Scotland/NI/retired).
 
 ---
 
-## Workstream 2 — Website
+## Workstream 2 — Website 🚧 in progress (`web/`)
+
+> **Built (first slice):** a Next.js 16 App Router app in `web/` (TypeScript,
+> Tailwind v4, "paper ledger" design). Pure HTTP client of the API via a typed
+> server client + thin BFF proxy routes. Live routes: home (postcode jump),
+> `/search` (server pool + on-device slider re-rank mirroring `scoring.py`),
+> `/check` (manual listing checker), `/area/[slug]` (the programmatic SEO
+> template — citable answer sentence, JSON-LD `Place`/`BreadcrumbList`, `noindex`
+> quality gate, `/area/<code>`→human-slug 308), `/methodology`, plus `sitemap.xml`
+> (staged: top 1,000 quality-gated areas), `robots.txt`, `llms.txt`. Production
+> build green; verified end-to-end against the live API.
+> **Backlog:** `/compare`, the `/town`·`/rent`·`/rankings` hubs + internal-link
+> mesh, full 7k sitemap, and a slim `/v1/areas/index` API endpoint.
 
 **Stack: Next.js App Router on Vercel**, RSC-first, TypeScript, Tailwind. Rendering
 chosen per route: SSG (home/methodology), **ISR for the ~7,264 area pages**
@@ -193,7 +205,7 @@ Ordered by value-per-effort and dependency. Each phase ships something usable.
 |---|---|---|---|
 | **0 — Quick wins (no new infra)** ✅ **done** | (a) **Listing checker, manual entry** (`app/pages/3_Listing_checker.py`) — postcode → MSOA via postcodes.io, area scores + price-vs-local; (b) **ONS PIPR per-bedroom rent** ingested (`rent_1bed_gbp`…`rent_4plus_gbp`) so the price check matches the listing's bed count | nothing | Shipped the most-requested feature with zero legal surface; per-bed rent is the biggest accuracy win. |
 | **1 — API** ✅ **built** | FastAPI (`api/`): resolve / search / listing-check / meta, OpenAPI, Dockerfile + fly.toml. Deploy = `fly deploy` | Phase 0 data | The keystone every other client needs. |
-| **2 — Website** | Next.js/Vercel: search + compare + **the 7,264 programmatic area pages** (SEO growth engine) + listing checker | API | Where organic growth comes from; the area pages are the moat. |
+| **2 — Website** 🚧 **in progress** (`web/`) | Next.js/Vercel: home, search (live re-rank), `/check`, the `/area/[slug]` SEO template (JSON-LD + quality gate), methodology, sitemap/robots/llms.txt. **Next:** compare, hub pages + link mesh, full 7k sitemap | API | Where organic growth comes from; the area pages are the moat. |
 | **3 — Mobile** | Expo app: MVP screens + on-device re-rank; then **Rightmove share-in** (deep links → iOS share extension) | API | The native share-in is the standout differentiator. |
 | **Cross-cutting** | Retire the legacy Streamlit dashboard once the website is live; data-refresh automation; analytics | — | — |
 
