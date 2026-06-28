@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse
 from . import data, postcodes, scoring
 from .models import (
     Area,
+    AreaIndexResponse,
     ListingCheckRequest,
     ListingCheckResponse,
     Meta,
@@ -85,6 +86,17 @@ def resolve_postcode(postcode: str = Query(..., min_length=5, description="UK po
         msoa_code=location["msoa_code"],
         msoa_name=location.get("msoa_name"),
         area=Area(**record),
+    )
+
+
+# Declared before /v1/areas/{msoa_code} so the literal path wins the match.
+@app.get("/v1/areas/index", response_model=AreaIndexResponse, tags=["areas"])
+def areas_index() -> AreaIndexResponse:
+    records = [Area(**data.clean(record)) for record in data.areas().to_dict("records")]
+    return AreaIndexResponse(
+        count=len(records),
+        data_vintage=data.data_vintage(),
+        areas=records,
     )
 
 

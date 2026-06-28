@@ -87,6 +87,14 @@ export default async function AreaPage({ params }: Props) {
               Other areas in {area.local_authority_name} →
             </Link>
           )}
+          {area.local_authority_name && (
+            <Link
+              href={`/rent/${townSlug(area.local_authority_name)}`}
+              className="text-accent hover:underline"
+            >
+              Rent prices in {area.local_authority_name} →
+            </Link>
+          )}
           {area.region && (
             <Link
               href={`/rankings/${regionSlug(area.region)}`}

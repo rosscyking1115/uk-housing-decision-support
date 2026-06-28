@@ -93,11 +93,11 @@ normalisation + clean 404s for out-of-scope (Scotland/NI/retired).
 > build green; verified end-to-end against the live API.
 >
 > **Added:** `/compare` (up to 4 areas side by side, URL-driven), region hubs
-> (`/rankings`, `/rankings/[region]`) and town hubs (`/town/[town]` per local
-> authority), the area↔town↔region internal-link mesh, and an expanded sitemap
-> (~6,800 URLs: all quality-gated areas + 318 town + 10 region hubs).
-> **Backlog:** `/rent/[town]` price-led hubs, a slim `/v1/areas/index` API
-> endpoint (so hubs/sitemap stop paginating full `/v1/search`), and deploy.
+> (`/rankings`, `/rankings/[region]`), town hubs (`/town/[town]`), `/rent/[town]`
+> price-led hubs, the area↔town↔rent↔region internal-link mesh, and an expanded
+> sitemap (~7,100 URLs). A slim `GET /v1/areas/index` endpoint now backs the hubs
+> in one cacheable request (was 37 POSTs to `/v1/search`).
+> **Backlog:** deploy (Vercel + Fly.io — needs account/domain decisions).
 
 **Stack: Next.js App Router on Vercel**, RSC-first, TypeScript, Tailwind. Rendering
 chosen per route: SSG (home/methodology), **ISR for the ~7,264 area pages**

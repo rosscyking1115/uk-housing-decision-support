@@ -1,4 +1,5 @@
 import type { Area } from "./types";
+import { townSlug } from "./geo";
 
 // Grouping helpers over the full dataset, for the region/town hubs and the
 // internal-link mesh. All pure functions of an Area[] the caller fetched once.
@@ -47,6 +48,30 @@ function byLaGet(map: Map<string, Area[]>, key: string): Area[] {
     map.set(key, list);
   }
   return list;
+}
+
+export interface TownGroup {
+  name: string;
+  region: string | null;
+  areas: Area[];
+}
+
+/** Resolve a town slug to its local-authority group (LA name isn't a fixed list). */
+export function findTownBySlug(all: Area[], slug: string): TownGroup | null {
+  const areas = all.filter(
+    (a) => a.local_authority_name && townSlug(a.local_authority_name) === slug,
+  );
+  if (areas.length === 0) return null;
+  return { name: areas[0].local_authority_name!, region: areas[0].region, areas };
+}
+
+/** Mean of a numeric Area field over the areas that have it, or null. */
+export function averageField(areas: Area[], key: keyof Area): number | null {
+  const values = areas
+    .map((a) => a[key])
+    .filter((v): v is number => typeof v === "number");
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((x, y) => x + y, 0) / values.length);
 }
 
 export function averageScore(areas: Area[]): number | null {

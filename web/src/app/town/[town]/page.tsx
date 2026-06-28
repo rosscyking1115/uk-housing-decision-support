@@ -3,8 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllAreas } from "@/lib/api";
 import { regionSlug, townSlug } from "@/lib/geo";
-import { rankByOverall } from "@/lib/hubs";
-import type { Area } from "@/lib/types";
+import { findTownBySlug, rankByOverall } from "@/lib/hubs";
 import { AreaCard } from "@/components/AreaCard";
 import { JsonLd } from "@/components/JsonLd";
 import { rankingJsonLd } from "@/lib/structured-data";
@@ -14,17 +13,8 @@ export const revalidate = 86400;
 
 type Props = { params: Promise<{ town: string }> };
 
-// Resolve a town slug to its local-authority areas (the LA name isn't a fixed
-// list, so we derive it from the data).
-async function resolveTown(slug: string): Promise<{ name: string; region: string | null; areas: Area[] } | null> {
-  const all = await getAllAreas();
-  const areas = all.filter((a) => a.local_authority_name && townSlug(a.local_authority_name) === slug);
-  if (areas.length === 0) return null;
-  return {
-    name: areas[0].local_authority_name!,
-    region: areas[0].region,
-    areas,
-  };
+async function resolveTown(slug: string) {
+  return findTownBySlug(await getAllAreas(), slug);
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -72,6 +62,12 @@ export default async function TownPage({ params }: Props) {
           {town.region ? `, ${town.region}` : ""}, ranked by overall indicator
           score.
         </p>
+        <Link
+          href={`/rent/${townSlug(town.name)}`}
+          className="mt-3 inline-block text-sm font-medium text-accent hover:underline"
+        >
+          See rent prices in {town.name} by bedroom →
+        </Link>
       </header>
 
       <div className="space-y-2">

@@ -43,11 +43,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
 
-    const townUrls: MetadataRoute.Sitemap = [...towns].map((t) => ({
-      url: `${SITE_URL}/town/${townSlug(t)}`,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    }));
+    const townUrls: MetadataRoute.Sitemap = [...towns].flatMap((t) => [
+      {
+        url: `${SITE_URL}/town/${townSlug(t)}`,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      },
+      {
+        url: `${SITE_URL}/rent/${townSlug(t)}`,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      },
+    ]);
 
     return [...core, ...townUrls, ...areas];
   } catch {

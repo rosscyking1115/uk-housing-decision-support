@@ -65,6 +65,12 @@ export interface Meta {
   note: string;
 }
 
+export interface AreaIndexResponse {
+  count: number;
+  data_vintage: string;
+  areas: Area[];
+}
+
 export interface SearchRequest {
   weights?: Record<string, number>;
   max_rent?: number | null;

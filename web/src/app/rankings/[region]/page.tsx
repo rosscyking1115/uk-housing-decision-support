@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllAreas } from "@/lib/api";
+import { getAllAreas, getMeta } from "@/lib/api";
 import { REGIONS, regionFromSlug, regionSlug, townSlug } from "@/lib/geo";
 import { areasInRegion, rankByOverall, townsInRegion } from "@/lib/hubs";
 import { score } from "@/lib/format";
@@ -16,8 +16,15 @@ const TOP_AREAS = 50;
 
 type Props = { params: Promise<{ region: string }> };
 
-// Pre-render all ten region hubs — they're the top of the link mesh.
-export function generateStaticParams() {
+// Pre-render all ten region hubs when the API is reachable at build (production,
+// API_BASE_URL → live service). When it isn't (local/CI builds decoupled from the
+// API), defer to on-demand ISR so the website build stays green on its own.
+export async function generateStaticParams() {
+  try {
+    await getMeta();
+  } catch {
+    return [];
+  }
   return REGIONS.map((r) => ({ region: regionSlug(r) }));
 }
 
