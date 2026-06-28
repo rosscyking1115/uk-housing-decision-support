@@ -15,15 +15,21 @@ the region hubs and sitemap), then the **website**.
 Config: [`api/fly.toml`](api/fly.toml) + [`api/Dockerfile`](api/Dockerfile). App
 name `uk-housing-decision-support-api`, region `lhr` (London), scales to zero.
 
-```bash
-# one-time: claim the global app name
-fly launch --no-deploy        # or `fly apps create uk-housing-decision-support-api`
+Run these **from the repo root** — the Dockerfile copies `api/` + `data/decision.duckdb`,
+so the build context must be the root (a root `.dockerignore` keeps the upload
+small by dropping the 1.2 GB warehouse, `.venv`, and `web/`). Do **not** run
+`fly launch` from the root — it ignores `api/fly.toml` and scaffolds a generic
+Python app with the wrong name.
 
-# deploy (from repo root; Dockerfile copies api/ + data/decision.duckdb)
-fly deploy
+```bash
+# one-time: claim the global app name from api/fly.toml
+fly apps create uk-housing-decision-support-api
+
+# deploy (reads api/fly.toml; build.dockerfile = api/Dockerfile, context = root)
+fly deploy --config api/fly.toml
 
 # lock CORS to the website origin once the web domain is known
-fly secrets set CORS_ALLOW_ORIGINS="https://YOUR-DOMAIN,https://www.YOUR-DOMAIN"
+fly secrets set CORS_ALLOW_ORIGINS="https://YOUR-DOMAIN,https://www.YOUR-DOMAIN" --config api/fly.toml
 ```
 
 - Public URL: `https://uk-housing-decision-support-api.fly.dev` (use this as the
