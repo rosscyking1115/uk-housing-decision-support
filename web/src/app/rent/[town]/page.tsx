@@ -50,8 +50,8 @@ export default async function RentTownPage({ params }: Props) {
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <nav className="mb-6 text-xs text-ink-muted">
+    <div className="mx-auto max-w-[1140px] px-6 pb-[70px] pt-[34px]">
+      <nav className="mb-6 font-mono text-xs text-muted">
         <Link href="/" className="hover:text-ink">Home</Link>
         <span className="mx-2">/</span>
         <Link href="/rankings" className="hover:text-ink">Rankings</Link>
@@ -69,9 +69,11 @@ export default async function RentTownPage({ params }: Props) {
         <span className="text-ink">Rent</span>
       </nav>
 
-      <header className="mb-8 max-w-2xl">
-        <h1 className="text-3xl font-semibold tracking-tight">Rent in {town.name}</h1>
-        <p className="mt-2 text-ink-muted">
+      <header className="mb-8 max-w-[620px]">
+        <h1 className="font-display text-[clamp(34px,4.6vw,52px)] font-bold leading-[1.05] text-ink">
+          Rent in {town.name}
+        </h1>
+        <p className="mt-2 text-[17px] text-ink2">
           Average monthly private rents across {ranked.length} neighbourhood
           {ranked.length === 1 ? "" : "s"} in {town.name}, by bedroom count.
           Figures are area-level ONS estimates — a benchmark, not a quote.
