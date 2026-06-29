@@ -6,17 +6,18 @@ import { useEffect, useState } from "react";
 // inline script in the layout applies the stored theme before paint (no flash);
 // this only handles the toggle + label. Label shows the theme you'd switch to.
 export function ThemeToggle() {
-  const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  // {mounted, dark}: read once on mount from the class the no-flash script set.
+  const [state, setState] = useState({ mounted: false, dark: false });
+  const { mounted, dark } = state;
 
   useEffect(() => {
-    setMounted(true);
-    setDark(document.documentElement.classList.contains("dark"));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- mount-time DOM read
+    setState({ mounted: true, dark: document.documentElement.classList.contains("dark") });
   }, []);
 
   function toggle() {
     const next = !dark;
-    setDark(next);
+    setState({ mounted: true, dark: next });
     document.documentElement.classList.toggle("dark", next);
     try {
       localStorage.setItem("movein-theme", next ? "dark" : "light");
