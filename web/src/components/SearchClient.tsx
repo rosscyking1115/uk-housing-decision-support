@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Area, ComponentKey, SearchResponse } from "@/lib/types";
 import { reweight } from "@/lib/reweight";
 import { areaSlug } from "@/lib/slug";
@@ -25,6 +25,9 @@ const DEFAULT_WEIGHTS: Record<ComponentKey, number> = {
 };
 const SHOWN = 40;
 const ROW_H = 162;
+const BUDGET_MIN = 600;
+const BUDGET_MAX = 5000; // at the max the filter is treated as "no limit"
+const BUDGET_STEP = 100;
 
 export function SearchClient({
   initialAreas,
@@ -35,7 +38,7 @@ export function SearchClient({
 }) {
   const [weights, setWeights] = useState<Record<ComponentKey, number>>(DEFAULT_WEIGHTS);
   const [regions, setRegions] = useState<string[]>(initialRegions);
-  const [budget, setBudget] = useState(2200);
+  const [budget, setBudget] = useState(BUDGET_MAX);
   const [pool, setPool] = useState<Area[]>(initialAreas);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,9 +49,12 @@ export function SearchClient({
     return Object.fromEntries(SLIDERS.map((s) => [s.key, 1])) as Record<ComponentKey, number>;
   }, [weights]);
 
+  // Sliders re-rank the visible pool instantly — no network.
   const ranked = useMemo(() => reweight(pool, effective).slice(0, SHOWN), [pool, effective]);
 
-  const applyFilters = useCallback(async () => {
+  // Filters (region/budget) change the pool, so they need a fresh fetch. A plain
+  // function (recreated each render) captures the latest weights for ordering.
+  async function fetchPool(regs: string[], bud: number) {
     setLoading(true);
     setError(null);
     try {
@@ -57,8 +63,8 @@ export function SearchClient({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           weights: effective,
-          regions: regions.length ? regions : null,
-          max_rent: budget < 2200 ? budget : null,
+          regions: regs.length ? regs : null,
+          max_rent: bud < BUDGET_MAX ? bud : null,
           limit: 200,
         }),
       });
@@ -69,10 +75,28 @@ export function SearchClient({
     } finally {
       setLoading(false);
     }
-  }, [effective, regions, budget]);
+  }
 
-  const toggleRegion = (r: string) =>
-    setRegions((p) => (p.includes(r) ? p.filter((x) => x !== r) : [...p, r]));
+  // Region toggles apply immediately; the budget slider is debounced.
+  const toggleRegion = (r: string) => {
+    const next = regions.includes(r) ? regions.filter((x) => x !== r) : [...regions, r];
+    setRegions(next);
+    fetchPool(next, budget);
+  };
+
+  const budgetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const onBudget = (v: number) => {
+    setBudget(v);
+    clearTimeout(budgetTimer.current);
+    budgetTimer.current = setTimeout(() => fetchPool(regions, v), 400);
+  };
+
+  const chip = (active: boolean) =>
+    `cursor-pointer rounded-full border px-2.5 py-1 text-xs transition-colors ${
+      active
+        ? "border-accent bg-accent text-white"
+        : "border-rule2 text-ink2 hover:border-accent-line hover:bg-accent-wash hover:text-ink"
+    }`;
 
   return (
     <div className="grid items-start gap-[26px] lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
@@ -99,46 +123,42 @@ export function SearchClient({
           </div>
         ))}
         <div className="mt-1.5 border-t border-rule pt-4">
-          <div className="mb-2.5 text-xs uppercase tracking-[.06em] text-muted">Filters</div>
+          <div className="mb-2.5 flex items-center justify-between text-xs uppercase tracking-[.06em] text-muted">
+            <span>Filters</span>
+            {loading && <span className="font-mono text-[10px] normal-case tracking-normal text-accent">updating…</span>}
+          </div>
           <label htmlFor="budget" className="mb-1.5 block text-[13px] text-ink2">
-            Max 2-bed rent · <span className="font-mono text-ink">{budget >= 2200 ? "£2,200+" : `£${budget}`}</span>
+            Max rent ·{" "}
+            <span className="font-mono text-ink">{budget >= BUDGET_MAX ? "no limit" : `£${budget.toLocaleString("en-GB")}/mo`}</span>
           </label>
           <input
             id="budget"
             type="range"
-            min={600}
-            max={2200}
-            step={50}
+            min={BUDGET_MIN}
+            max={BUDGET_MAX}
+            step={BUDGET_STEP}
             value={budget}
-            onChange={(e) => setBudget(Number(e.target.value))}
+            onChange={(e) => onBudget(Number(e.target.value))}
+            aria-label="Maximum monthly rent"
             className="mb-4 h-6 w-full cursor-pointer accent-[var(--accent)]"
           />
           <div className="mb-2 text-[13px] text-ink2">Region</div>
           <div className="flex flex-wrap gap-1.5">
-            {REGIONS.map((r) => {
-              const active = regions.includes(r);
-              return (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => toggleRegion(r)}
-                  className={`rounded-full border px-2.5 py-1 text-xs ${
-                    active ? "border-accent bg-accent text-white" : "border-rule2 text-ink2 hover:text-ink"
-                  }`}
-                >
-                  {r}
-                </button>
-              );
-            })}
+            {REGIONS.map((r) => (
+              <button key={r} type="button" onClick={() => toggleRegion(r)} aria-pressed={regions.includes(r)} className={chip(regions.includes(r))}>
+                {r}
+              </button>
+            ))}
           </div>
-          <button
-            type="button"
-            onClick={applyFilters}
-            disabled={loading}
-            className="mt-4 w-full rounded-[8px] bg-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {loading ? "Updating…" : "Apply filters"}
-          </button>
+          {regions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => { setRegions([]); fetchPool([], budget); }}
+              className="mt-2.5 cursor-pointer text-xs text-accent hover:underline"
+            >
+              Clear regions
+            </button>
+          )}
           {error && <p className="mt-2 text-xs text-caution">{error}</p>}
         </div>
       </div>
@@ -158,7 +178,7 @@ export function SearchClient({
               className="absolute inset-x-0 transition-[top] duration-[550ms] ease-[cubic-bezier(.22,.61,.36,1)]"
               style={{ top: i * ROW_H, height: ROW_H - 14 }}
             >
-              <div className="flex h-full items-center gap-4 rounded-[14px] border border-rule2 bg-card px-[18px] py-4">
+              <div className="group flex h-full items-center gap-4 rounded-[14px] border border-rule2 bg-card px-[18px] py-4 transition-colors hover:border-accent-line">
                 <div className="w-[54px] flex-shrink-0 text-center">
                   <div className="font-mono text-xs text-muted">#{i + 1}</div>
                   <div className="font-mono text-[30px] font-medium leading-none text-ink">{fmtScore(a.match_score)}</div>
@@ -167,7 +187,7 @@ export function SearchClient({
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/area/${areaSlug(a.area_id, a.area_name)}`}
-                    className="font-display text-[23px] font-bold leading-[1.1] text-ink hover:text-accent"
+                    className="font-display text-[23px] font-bold leading-[1.1] text-ink transition-colors hover:text-accent"
                   >
                     {a.area_name}
                   </Link>
@@ -192,10 +212,7 @@ export function SearchClient({
                           <div className="h-1 w-full overflow-hidden rounded-[2px] bg-bar-track">
                             <div
                               className="h-full rounded-[2px]"
-                              style={{
-                                width: v == null ? 0 : `${v}%`,
-                                background: weights[s.key] >= 4 ? "var(--accent)" : "var(--bar)",
-                              }}
+                              style={{ width: v == null ? 0 : `${v}%`, background: weights[s.key] >= 4 ? "var(--accent)" : "var(--bar)" }}
                             />
                           </div>
                         </div>
@@ -206,13 +223,16 @@ export function SearchClient({
                 <Link
                   href={`/area/${areaSlug(a.area_id, a.area_name)}`}
                   aria-label={`Open ${a.area_name}`}
-                  className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center self-center rounded-[8px] border border-rule2 bg-card2 text-ink"
+                  className="flex h-[38px] w-[38px] flex-shrink-0 cursor-pointer items-center justify-center self-center rounded-[8px] border border-rule2 bg-card2 text-ink transition-colors hover:border-accent hover:bg-accent hover:text-white"
                 >
                   →
                 </Link>
               </div>
             </div>
           ))}
+          {ranked.length === 0 && !loading && (
+            <p className="text-sm text-muted">No areas match those filters. Try widening the budget or regions.</p>
+          )}
         </div>
       </div>
     </div>
