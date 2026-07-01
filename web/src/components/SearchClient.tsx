@@ -7,8 +7,9 @@ import type { Area, ComponentKey, SearchResponse } from "@/lib/types";
 import { reweight } from "@/lib/reweight";
 import { areaSlug } from "@/lib/slug";
 import { rentPerMonth, score as fmtScore } from "@/lib/format";
+import { InfoPopover } from "./InfoPopover";
 
-// Leaflet touches window, so load the map client-only.
+// Google Maps touches window, so load the map client-only.
 const SearchMap = dynamic(() => import("./SearchMap"), {
   ssr: false,
   loading: () => <div className="h-[380px] w-full animate-pulse rounded-[14px] border border-rule2 bg-card2" />,
@@ -22,6 +23,41 @@ const SLIDERS: { key: ComponentKey; label: string; abbr: string }[] = [
   { key: "convenience_score", label: "Getting around", abbr: "Get" },
 ];
 const TAGS = ["Ignore", "Minor", "Some", "Matters", "High", "Top"];
+
+// What each indicator measures + its source, shown in the per-slider info popover.
+const INDICATOR_HELP: Record<ComponentKey, { measures: string; source: string }> = {
+  affordability_score: {
+    measures: "How cheap or dear it is to live here — typical private rent and sale prices versus the rest of England & Wales. Higher score = more affordable.",
+    source: "ONS Price Index of Private Rents; HM Land Registry.",
+  },
+  safety_score: {
+    measures: "Recorded crime, as a rate per 1,000 residents. Higher score = less recorded crime. It is a rate, never a safe/unsafe label.",
+    source: "Police.uk street-level open data.",
+  },
+  energy_score: {
+    measures: "Median home energy rating (EPC) — a proxy for heating bills. Higher score = more efficient homes.",
+    source: "EPC Register.",
+  },
+  flood_score: {
+    measures: "Environment Agency flood-risk band. Higher score = lower flood risk.",
+    source: "Environment Agency / planning.data.gov.uk.",
+  },
+  convenience_score: {
+    measures: "Shops, services and transport within walking reach. Higher score = more within reach.",
+    source: "OpenStreetMap.",
+  },
+};
+
+// The 0–5 weight scale, explained once in the header popover.
+const SCALE_HELP: [string, string][] = [
+  ["Ignore", "Left out of the ranking entirely (weight 0)."],
+  ["Minor", "Counts a little."],
+  ["Some", "Counts a bit more."],
+  ["Matters", "A solid, balanced weight."],
+  ["High", "Pulls the ranking strongly."],
+  ["Top", "The single biggest driver of the ranking."],
+];
+
 const REGIONS = [
   "North East", "North West", "Yorkshire and The Humber", "East Midlands",
   "West Midlands", "East of England", "London", "South East", "South West", "Wales",
@@ -30,7 +66,6 @@ const REGIONS = [
 const DEFAULT_WEIGHTS: Record<ComponentKey, number> = {
   affordability_score: 3, safety_score: 3, energy_score: 3, flood_score: 2, convenience_score: 3,
 };
-const SHOWN = 40;
 const ROW_H = 162;
 const BUDGET_MIN = 600;
 const BUDGET_MAX = 5000; // at the max the filter is treated as "no limit"
@@ -49,6 +84,8 @@ export function SearchClient({
   const [pool, setPool] = useState<Area[]>(initialAreas);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Area | null>(null);
+  const mapWrap = useRef<HTMLDivElement>(null);
 
   const effective = useMemo(() => {
     const sum = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -56,8 +93,16 @@ export function SearchClient({
     return Object.fromEntries(SLIDERS.map((s) => [s.key, 1])) as Record<ComponentKey, number>;
   }, [weights]);
 
-  // Sliders re-rank the visible pool instantly — no network.
-  const ranked = useMemo(() => reweight(pool, effective).slice(0, SHOWN), [pool, effective]);
+  // Sliders re-rank the visible pool instantly — no network. Every matching area
+  // is shown (the map clusters them); nothing is hidden behind a top-N cap.
+  const ranked = useMemo(() => reweight(pool, effective), [pool, effective]);
+
+  // Selecting an area focuses the map (pan/zoom + InfoWindow) and, on narrow
+  // screens where the map sits above the list, scrolls it back into view.
+  const select = (area: Area | null) => {
+    setSelected(area);
+    if (area) mapWrap.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
 
   // Filters (region/budget) change the pool, so they need a fresh fetch. A plain
   // function (recreated each render) captures the latest weights for ordering.
@@ -76,6 +121,7 @@ export function SearchClient({
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? "Search failed.");
+      setSelected(null);
       setPool(((await res.json()) as SearchResponse).results);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Search failed.");
@@ -109,11 +155,40 @@ export function SearchClient({
     <div className="grid items-start gap-[26px] lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
       {/* Controls */}
       <div className="rounded-[16px] border border-rule2 bg-card p-[22px] lg:sticky lg:top-[78px]">
-        <div className="mb-[18px] font-mono text-[11px] uppercase tracking-[.12em] text-ink">Weight each indicator</div>
+        <div className="mb-[18px] flex items-center justify-between">
+          <span className="font-mono text-[11px] uppercase tracking-[.12em] text-ink">Weight each indicator</span>
+          <InfoPopover label="What the weights mean" align="right">
+            <div className="mb-1.5 text-[13px] font-semibold text-ink">How weighting works</div>
+            <p className="mb-2 text-[12px] leading-[1.5] text-ink2">
+              Drag a slider right to make that indicator count for more. The tag shows its strength:
+            </p>
+            <ul className="mb-2 space-y-1">
+              {SCALE_HELP.map(([tag, meaning]) => (
+                <li key={tag} className="flex gap-2 text-[12px] leading-[1.4]">
+                  <span className="w-[52px] flex-shrink-0 font-mono text-accent">{tag}</span>
+                  <span className="text-ink2">{meaning}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[12px] leading-[1.5] text-muted">
+              Match blends your five 0–100 scores with a geometric mean, so one weak pillar pulls an
+              area down more than a strong one lifts it.
+            </p>
+          </InfoPopover>
+        </div>
         {SLIDERS.map((s) => (
           <div key={s.key} className="mb-[18px]">
             <div className="mb-[7px] flex items-baseline justify-between">
-              <label htmlFor={s.key} className="text-sm font-semibold text-ink">{s.label}</label>
+              <span className="flex items-center gap-1.5">
+                <label htmlFor={s.key} className="text-sm font-semibold text-ink">{s.label}</label>
+                <InfoPopover label={`About ${s.label}`}>
+                  <div className="mb-1.5 text-[13px] font-semibold text-ink">{s.label}</div>
+                  <p className="mb-2 text-[12px] leading-[1.5] text-ink2">{INDICATOR_HELP[s.key].measures}</p>
+                  <p className="text-[11px] leading-[1.4] text-muted">
+                    Source: {INDICATOR_HELP[s.key].source}
+                  </p>
+                </InfoPopover>
+              </span>
               <span className="font-mono text-xs text-accent">{TAGS[weights[s.key]]}</span>
             </div>
             <input
@@ -172,10 +247,11 @@ export function SearchClient({
 
       {/* Results */}
       <div>
-        <div className="mb-4">
-          <SearchMap areas={ranked} />
+        <div ref={mapWrap} className="mb-4 scroll-mt-[78px]">
+          <SearchMap areas={ranked} selected={selected} onSelect={select} />
           <p className="mt-1.5 text-[11px] text-muted">
-            Showing the top {ranked.length} on the map — hover a pin for the score, click to open.
+            All {ranked.length} matches are on the map (grouped into clusters when they overlap) —
+            click a pin or a result for a quick look, then open the full page.
           </p>
         </div>
         <div className="mb-3.5 flex items-baseline justify-between">
@@ -185,64 +261,79 @@ export function SearchClient({
           <div className="hidden text-[13px] text-muted sm:block">Match = your weighting of the 5 indicators</div>
         </div>
         <div className="relative" style={{ height: ranked.length * ROW_H }}>
-          {ranked.map((a, i) => (
-            <div
-              key={a.area_id}
-              className="absolute inset-x-0 transition-[top] duration-[550ms] ease-[cubic-bezier(.22,.61,.36,1)]"
-              style={{ top: i * ROW_H, height: ROW_H - 14 }}
-            >
-              <div className="group flex h-full items-center gap-4 rounded-[14px] border border-rule2 bg-card px-[18px] py-4 transition-colors hover:border-accent-line">
-                <div className="w-[54px] flex-shrink-0 text-center">
-                  <div className="font-mono text-xs text-muted">#{i + 1}</div>
-                  <div className="font-mono text-[30px] font-medium leading-none text-ink">{fmtScore(a.match_score)}</div>
-                  <div className="text-[10px] uppercase tracking-[.06em] text-muted">match</div>
-                </div>
-                <div className="min-w-0 flex-1">
+          {ranked.map((a, i) => {
+            const isSel = selected?.area_id === a.area_id;
+            return (
+              <div
+                key={a.area_id}
+                className="absolute inset-x-0 transition-[top] duration-[550ms] ease-[cubic-bezier(.22,.61,.36,1)]"
+                style={{ top: i * ROW_H, height: ROW_H - 14 }}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSel}
+                  onClick={() => select(a)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      select(a);
+                    }
+                  }}
+                  className={`group flex h-full cursor-pointer items-center gap-4 rounded-[14px] border px-[18px] py-4 transition-colors ${
+                    isSel ? "border-accent bg-accent-wash" : "border-rule2 bg-card hover:border-accent-line"
+                  }`}
+                >
+                  <div className="w-[54px] flex-shrink-0 text-center">
+                    <div className="font-mono text-xs text-muted">#{i + 1}</div>
+                    <div className="font-mono text-[30px] font-medium leading-none text-ink">{fmtScore(a.match_score)}</div>
+                    <div className="text-[10px] uppercase tracking-[.06em] text-muted">match</div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-display text-[23px] font-bold leading-[1.1] text-ink transition-colors group-hover:text-accent">
+                      {a.area_name}
+                    </div>
+                    <div className="mt-0.5 text-[13px] text-muted">
+                      {[a.local_authority_name, a.region].filter(Boolean).join(" · ")}
+                      {a.official_rent_monthly_gbp != null && (
+                        <>
+                          {" · "}
+                          <span className="font-mono text-ink2">{rentPerMonth(a.official_rent_monthly_gbp)}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="mt-[11px] flex flex-wrap gap-3.5">
+                      {SLIDERS.map((s) => {
+                        const v = a[s.key];
+                        return (
+                          <div key={s.key} className="min-w-[48px]">
+                            <div className="mb-[3px] flex justify-between gap-1.5 text-[10px] text-muted">
+                              <span>{s.abbr}</span>
+                              <span className="font-mono text-ink2">{fmtScore(v)}</span>
+                            </div>
+                            <div className="h-1 w-full overflow-hidden rounded-[2px] bg-bar-track">
+                              <div
+                                className="h-full rounded-[2px]"
+                                style={{ width: v == null ? 0 : `${v}%`, background: weights[s.key] >= 4 ? "var(--accent)" : "var(--bar)" }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                   <Link
                     href={`/area/${areaSlug(a.area_id, a.area_name)}`}
-                    className="font-display text-[23px] font-bold leading-[1.1] text-ink transition-colors hover:text-accent"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Open ${a.area_name} details`}
+                    className="flex h-[38px] w-[38px] flex-shrink-0 cursor-pointer items-center justify-center self-center rounded-[8px] border border-rule2 bg-card2 text-ink transition-colors hover:border-accent hover:bg-accent hover:text-white"
                   >
-                    {a.area_name}
+                    →
                   </Link>
-                  <div className="mt-0.5 text-[13px] text-muted">
-                    {[a.local_authority_name, a.region].filter(Boolean).join(" · ")}
-                    {a.official_rent_monthly_gbp != null && (
-                      <>
-                        {" · "}
-                        <span className="font-mono text-ink2">{rentPerMonth(a.official_rent_monthly_gbp)}</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="mt-[11px] flex flex-wrap gap-3.5">
-                    {SLIDERS.map((s) => {
-                      const v = a[s.key];
-                      return (
-                        <div key={s.key} className="min-w-[48px]">
-                          <div className="mb-[3px] flex justify-between gap-1.5 text-[10px] text-muted">
-                            <span>{s.abbr}</span>
-                            <span className="font-mono text-ink2">{fmtScore(v)}</span>
-                          </div>
-                          <div className="h-1 w-full overflow-hidden rounded-[2px] bg-bar-track">
-                            <div
-                              className="h-full rounded-[2px]"
-                              style={{ width: v == null ? 0 : `${v}%`, background: weights[s.key] >= 4 ? "var(--accent)" : "var(--bar)" }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
-                <Link
-                  href={`/area/${areaSlug(a.area_id, a.area_name)}`}
-                  aria-label={`Open ${a.area_name}`}
-                  className="flex h-[38px] w-[38px] flex-shrink-0 cursor-pointer items-center justify-center self-center rounded-[8px] border border-rule2 bg-card2 text-ink transition-colors hover:border-accent hover:bg-accent hover:text-white"
-                >
-                  →
-                </Link>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {ranked.length === 0 && !loading && (
             <p className="text-sm text-muted">No areas match those filters. Try widening the budget or regions.</p>
           )}
