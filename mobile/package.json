@@ -3,7 +3,11 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-serif": "^0.4.1",
     "@expo/ui": "~57.0.3",
+    "@react-native-community/slider": "5.2.0",
     "@tanstack/react-query": "^5.66.0",
     "expo": "~57.0.2",
     "expo-constants": "~57.0.3",
@@ -30,6 +34,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
