@@ -1,18 +1,24 @@
 # MoveIn
 
-**An explainable decision-support tool for where to live in England & Wales —
-honest neighbourhood indicators built from official open data, served by a tested
-dbt + DuckDB engine through a public API and website.**
+**An analytics-engineering showcase: a tested dbt + DuckDB pipeline that turns
+seven official UK open-data sources into explainable, documented neighbourhood
+indicators — with published lineage, 189 data tests, and a reproducible
+fixture-to-full build.**
 
-MoveIn reads a neighbourhood (MSOA grain, 7,264 areas) and lays it out like a
-surveyor's schedule: five 0–100 indicators — affordability, safety, energy, flood
-resilience, convenience — **and the raw figure behind every score**, with a
-weighted overall that re-ranks to your priorities, per-area confidence, and source
-caveats. Not a price predictor and not a listings site: an honest decision layer
-over fragmented official UK datasets. Indicators only — never a "safe/unsafe"
-verdict.
+The engine rolls fragmented public housing data up to a consistent MSOA grain
+(7,264 England & Wales neighbourhoods) and derives five transparent 0–100
+indicators — affordability, safety, energy, flood resilience, convenience — each
+kept **beside the raw figure it came from**, with per-area confidence driven by
+data coverage. Missing data lowers confidence; it never silently becomes a zero.
+The "where to live" framing is the *vehicle* — what's on show is the **pipeline,
+the dimensional + decision modelling, the tests, and the explainability layer**.
 
-> *MoveIn* is the product; `movein` is the repository.
+> **Portfolio note.** This is a personal analytics-engineering project (target
+> roles: analytics engineer / data analyst), not a product — the UK area-data
+> space is already well served (CrystalRoof, Plumplot, PostcodeCheck, …). It
+> exists to demonstrate an end-to-end data stack over official open data.
+>
+> *MoveIn* is the working name; `movein` is the repository.
 
 [![CI](https://github.com/rosscyking1115/movein/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/movein/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
@@ -29,31 +35,31 @@ verdict.
 
 ## Architecture
 
-One engine, many clients. The dbt + DuckDB warehouse produces a small read-only
-`decision.duckdb` extract; the API serves it; the MoveIn website (and a planned
-mobile app) are HTTP clients of the same typed contract.
+**The dbt + DuckDB warehouse is the centre of gravity.** It builds a small
+read-only `decision.duckdb` extract that a thin FastAPI service serves; a Next.js
+website is one HTTP client of it. The clients exist to show the modelling is
+frontend-agnostic and genuinely consumable — they are not the point.
 
 ```text
   dbt + DuckDB engine  ──►  data/decision.duckdb  ──►  API (FastAPI, api/)
-  (9 open-data sources)        (slim extract)            │  /v1 + OpenAPI
+  (7 open-data sources)        (slim extract)            │  /v1 + OpenAPI
                                                          │
-                                          ┌──────────────┴──────────────┐
-                                   MoveIn website (web/)        Mobile app (Expo)
-                                      Next.js · Vercel               planned
+                                                  Website (web/, Next.js)
+                                                  — a thin demo client
 ```
 
-Nothing is reimplemented per client: the re-ranking/scoring logic in
+The transformation lives in exactly one place: the scoring logic in
 [`api/scoring.py`](api/scoring.py) mirrors the warehouse mart
-(`rpt_neighbourhood_score`), and the website re-ranks client-side from the same
-component scores for instant slider response. Design rationale lives in
-[`PRODUCT_ROADMAP.md`](PRODUCT_ROADMAP.md).
+(`rpt_neighbourhood_score`), so no business logic is reimplemented per client.
+(A Streamlit MVP and an Expo mobile client were also built and are now parked —
+see the roadmap.)
 
 ## Repository layout
 
 | Path | What |
 |---|---|
 | `models/` | dbt models: sources → staging → intermediate → marts (the engine). |
-| `seeds/`, `macros/`, `snapshots/`, `analyses/` | dbt seeds (fixtures + name lookups), macros, snapshots, analyses. |
+| `seeds/`, `macros/`, `analyses/` | dbt seeds (fixtures + name lookups), reusable macros (`haversine_km`, `median_anchored`), ad-hoc analyses. |
 | `scripts/` | Data prep/load scripts for the real (non-fixture) sources. |
 | `tests/` | 189 dbt data tests + the API test suite (`tests/test_api.py`). |
 | `api/` | **FastAPI service** over the decision marts (resolve / search / listing-check / areas index / meta). `Dockerfile` + `fly.toml`. |
@@ -72,7 +78,7 @@ The four planning docs at the repo root carry the full reasoning:
 A complete, tested analytics-engineering pipeline is the project's credibility:
 sources → staging → intermediate → marts (dimensions / facts / reporting), tested
 at every layer, with lineage and column-level docs published to GitHub Pages on
-every push. Nine national open-data signals are rolled up to MSOA grain.
+every push. Seven official open-data sources are rolled up to MSOA grain.
 
 | Signal | Coverage | Notes |
 |---|---|---|
@@ -86,14 +92,39 @@ every push. Nine national open-data signals are rolled up to MSOA grain.
 
 Each external source is **fixture-default for fast, reproducible CI**, with a
 real-data toggle (`--vars '<source>: …'`) for production builds. Explainable
-scoring (`rpt_neighbourhood_score`) turns these into five 0–100 percentile
-component scores, a weighted overall that re-ranks on user weights, per-area
-confidence from coverage, and a "why this area" line. Door-to-door commute *time*
-is the one remaining planned signal (station proximity is already covered).
+scoring (`rpt_neighbourhood_score`) turns these into five 0–100 component scores,
+a weighted overall, per-area confidence from coverage, and a "why this area" line.
+Door-to-door commute *time* is the one remaining planned signal (station proximity
+is already covered).
 
 Geography, the source toggles, and the full per-source prep commands are detailed
 in [`HOUSING_DECISION_SUPPORT_DATA_SOURCES.md`](HOUSING_DECISION_SUPPORT_DATA_SOURCES.md)
 and the [Source attribution](#source-attribution) section.
+
+### How a recommendation is explained
+
+The score is a transformation you can read top to bottom, not a black box —
+implemented in [`rpt_neighbourhood_score`](models/marts/decision/rpt_neighbourhood_score.sql):
+
+1. **Per-indicator normalisation → 0–100.** Continuous indicators (rent-to-income
+   ratio, crime rate, station distance) use a **median-anchored, winsorised
+   min-max** via the [`median_anchored`](macros/median_anchored.sql) macro: clip to
+   the 2nd/98th percentile, then map p2→0, median→50, p98→100. This keeps
+   *magnitude* (unlike a pure percentile rank, which forces a uniform spread and
+   makes every area look extreme). Categorical/absolute indicators use fixed
+   anchors — EPC band (A=100 … G=0), flood = share of postcodes in a flood zone.
+2. **Overall = weighted _geometric_ mean** of the indicators an area actually has
+   (floored at 1), so one excellent pillar can't mask a poor one. Weights are
+   configurable via dbt `vars`; a client can re-weight from the stored component
+   scores without recomputing the marts.
+3. **Missing indicators are dropped, never zeroed** — an absent signal lowers the
+   area's `confidence_level` (`high`/`medium`/`low` from coverage) instead of
+   silently penalising it.
+4. **Every score ships beside its raw figure** (rent, crime rate, EPC band) and a
+   generated `why_this_area` sentence, so the output is auditable.
+
+Because it's one SQL transformation, the logic is covered by the same data tests
+as everything else (score bounds 0–100, coherence, coverage-vs-confidence).
 
 ## Running locally
 
@@ -148,7 +179,7 @@ sqlfluff lint.
 | **dbt total** | **189** | All passing on every `dbt build`. |
 | API (`tests/test_api.py`) | 8 | Endpoint contract, search re-rank, coverage 404/422, mocked postcodes.io. |
 
-## Product principles
+## Modelling & scoring principles
 
 - Explain trade-offs; never hide behind one opaque score.
 - No "safe"/"unsafe" labels — measured indicators and caveats only.
@@ -160,15 +191,26 @@ sqlfluff lint.
 
 ## Roadmap
 
-Phased plan in [`PRODUCT_ROADMAP.md`](PRODUCT_ROADMAP.md). Current state:
+As a portfolio piece, the roadmap is about **engineering depth, not product
+surface.** Built and stable: the dbt + DuckDB engine (this repo), a FastAPI
+service ([`api/`](api/)), and a Next.js site ([`web/`](web/)) as a thin client. A
+Streamlit MVP and an Expo mobile client were also built and are **parked** — the
+clients aren't the point.
 
-- **Phase 0 — data quick wins** ✅ manual listing checker + ONS per-bedroom rent.
-- **Phase 1 — API** ✅ **deployed** (Fly.io).
-- **Phase 2 — Website** ✅ **deployed** (Vercel): the MoveIn UI — search, compare,
-  listing checker, and ~7k programmatic area/town/region/rent pages.
-- **Phase 3 — Mobile (Expo)** ⬜ planned; the standout feature is Rightmove share-in.
-- **Cross-cutting** ✅ retired the legacy Streamlit apps; data-refresh deploy
-  automated. ⬜ analytics; custom domain + Search Console; door-to-door commute time.
+Analytics-engineering improvements planned (deepening the modelling):
+
+- **Decompose the decision marts** into an `int_area__*` intermediate layer —
+  `rpt_area_profile_mvp` and `rpt_neighbourhood_score` currently carry the joins +
+  scoring inline; splitting them improves testability and lineage granularity.
+- **Model contracts** (`contract: enforced`) on the decision marts — they are the
+  API's schema of record.
+- **Incremental materialisation** for `fct_transactions` over the ~5M Land
+  Registry rows.
+- A **snapshot** (SCD-2) of ONS rent across data vintages.
+- Door-to-door **commute time** as an additional indicator (station proximity is
+  already covered).
+
+Historical product framing is preserved in [`PRODUCT_ROADMAP.md`](PRODUCT_ROADMAP.md).
 
 ## Source attribution
 
