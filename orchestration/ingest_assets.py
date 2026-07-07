@@ -17,7 +17,7 @@ from dagster import (
     asset,
 )
 
-from .resources import RAW_GLOB, WAREHOUSE_DB
+from .resources import RAW_GLOB, WAREHOUSE_DB, load_script
 
 
 class LandRegistryIngestConfig(Config):
@@ -43,7 +43,7 @@ class LandRegistryIngestConfig(Config):
 def raw_landreg_ppd(
     context: AssetExecutionContext, config: LandRegistryIngestConfig
 ) -> MaterializeResult:
-    import download_raw  # scripts/download_raw.py
+    download_raw = load_script("download_raw")
 
     years = config.years or download_raw.load_default_years()
     context.log.info(f"Ensuring raw PPD parquet for years: {years}")
@@ -76,7 +76,7 @@ def raw_landreg_ppd(
     ),
 )
 def warehouse_transactions(context: AssetExecutionContext) -> MaterializeResult:
-    import load_to_duckdb  # scripts/load_to_duckdb.py
+    load_to_duckdb = load_script("load_to_duckdb")
 
     return_code = load_to_duckdb.main()
     if return_code != 0:

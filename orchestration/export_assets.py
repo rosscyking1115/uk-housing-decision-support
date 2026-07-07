@@ -10,7 +10,7 @@ from dagster import AssetExecutionContext, MaterializeResult, asset
 from dagster_dbt import get_asset_key_for_model
 
 from .dbt_assets import movein_dbt_models
-from .resources import DATA_DIR
+from .resources import DATA_DIR, load_script
 
 
 @asset(
@@ -27,7 +27,7 @@ from .resources import DATA_DIR
     ),
 )
 def decision_extract(context: AssetExecutionContext) -> MaterializeResult:
-    import build_decision_db  # scripts/build_decision_db.py
+    build_decision_db = load_script("build_decision_db")
 
     return_code = build_decision_db.main()
     if return_code != 0:

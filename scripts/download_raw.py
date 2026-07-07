@@ -163,7 +163,7 @@ def download_year(year: int, *, force_refresh: bool = False) -> Path:
             print()  # newline after progress
 
     output_path = tmp_parquet_path if force_refresh else parquet_path
-    print(f"  [convert]  {csv_path.name} → {parquet_path.name}")
+    print(f"  [convert]  {csv_path.name} -> {parquet_path.name}")
     df = pd.read_csv(
         csv_path,
         names=LANDREG_COLUMNS,
@@ -191,7 +191,7 @@ def download_year(year: int, *, force_refresh: bool = False) -> Path:
 
     rows = len(df)
     size_mb = parquet_path.stat().st_size / 1024 / 1024
-    print(f"  [done]     {rows:,} rows → {size_mb:.1f} MB Parquet")
+    print(f"  [done]     {rows:,} rows -> {size_mb:.1f} MB Parquet")
     return parquet_path
 
 

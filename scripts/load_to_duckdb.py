@@ -72,7 +72,7 @@ def main() -> int:
         con.close()
 
     print(f"\nLoaded {rowcount:,} rows into raw_landreg.transactions")
-    print(f"Date range: {min_date} → {max_date}")
+    print(f"Date range: {min_date} -> {max_date}")
     return 0
 
 
