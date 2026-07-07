@@ -143,12 +143,14 @@ an asset and every dbt test an asset check in the same lineage — and end at
 
 Two design points worth reading the code for:
 
-- **A data-quality gate *before* dbt.** dbt tests run after load;
-  [`orchestration/checks.py`](orchestration/checks.py) validates the raw
-  Land Registry parquet *before* it enters the warehouse (row-count floor,
-  price/date null-flood, malformed-postcode rate) and **blocks the graph** on
-  failure — a truncated monthly drop stops at the front door instead of
-  propagating into the marts.
+- **Data-quality gates *before* dbt.** dbt tests run after load; every
+  ingestion asset is gated *before* it. The raw Land Registry parquet is
+  validated in [`orchestration/checks.py`](orchestration/checks.py) (row-count
+  floor, price/date null-flood, malformed-postcode rate), and each reference
+  source carries a `prepared_file_is_sane` check evaluated **before its
+  drop-and-recreate load** — without it, a truncated prepared file would
+  replace a good warehouse table. A failed gate halts the graph at the front
+  door instead of propagating into the marts.
 - **The orchestrated build is the real refresh.** It parses *and* builds dbt
   with the real-source vars, while plain `dbt build` keeps the fixture-seed
   default for fast, reproducible CI. One `full_refresh` job runs the whole
@@ -156,7 +158,9 @@ Two design points worth reading the code for:
 
 Why Dagster and not Airflow: this is a set of data assets with lineage, not a
 task DAG — the asset/materialization model fits, and dbt lineage flows into the
-same graph. Why no deployed cron: the full source archives are large/licensed
+same graph. Freshness is declared (35-day warn on the warehouse spine and the
+extract, mirroring dbt's source freshness) and a monthly schedule is defined in
+code — but ships **switched off**: the full source archives are large/licensed
 and refreshed manually, so the job runs on demand
 (`dagster dev -m orchestration.definitions`) — pretending a scheduler runs in
 production would be theatre. Details and trade-offs in

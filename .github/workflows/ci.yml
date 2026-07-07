@@ -6,9 +6,11 @@
 #
 # What it does:
 #   1. Set up Python 3.13 + the pinned dbt stack
-#   2. Python unit tests — downloader, dependency imports, FastAPI API suite
-#   3. Install dbt packages (dbt_utils, dbt_expectations, dbt_date)
-#   4. Stage profiles.yml from the committed example
+#   2. Install dbt packages (dbt_utils, dbt_expectations, dbt_date)
+#   3. Stage profiles.yml from the committed example
+#   4. Python unit tests — downloader, dependency imports, FastAPI API suite,
+#      and the Dagster definitions smoke test (needs dbt deps + profiles to
+#      parse the manifest, hence this ordering)
 #   5. Download two years of Land Registry data (--sample, enough for YoY)
 #   6. Load it into DuckDB
 #   7. dbt source freshness — proves the loaded source is current enough
@@ -65,9 +67,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Python unit tests (downloader, dependency imports, API suite)
-        run: python -m unittest discover -s tests -p "test_*.py"
-
       - name: Install dbt packages
         run: dbt deps
 
@@ -75,6 +74,11 @@ jobs:
         run: |
           mkdir -p ~/.dbt
           cp profiles.yml.example ~/.dbt/profiles.yml
+
+      - name: Python unit tests (downloader, imports, API suite, Dagster defs)
+        # Runs after `dbt deps` + profiles staging: the orchestration smoke
+        # test parses the dbt manifest to load the Dagster definitions.
+        run: python -m unittest discover -s tests -p "test_*.py"
 
       - name: Download Land Registry sample (2 years)
         run: python scripts/download_raw.py --sample
