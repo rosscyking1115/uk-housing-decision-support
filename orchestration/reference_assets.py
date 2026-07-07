@@ -8,6 +8,12 @@ by the scripts/prepare_*.py normalizers from large/licensed source archives
 fetched manually and never committed — Dagster documents that boundary in the
 lineage instead of pretending to own it.
 
+Every load asset carries a `prepared_file_is_sane` check that validates the
+prepared CSV **before** the loader runs. This matters because the loaders are
+drop-and-recreate: a truncated or malformed prepared file would replace a good
+warehouse table with garbage. The gate (row-count floor, required columns, key
+column non-null) aborts the load before the destructive drop.
+
 One deliberate divergence from the scripts: when the prepared file is missing,
 the load scripts no-op with exit 0 (so plain-dbt CI and fresh clones are
 unaffected). Inside the orchestration graph that would be a silent lie — the
@@ -16,11 +22,11 @@ file fails the asset with pointers to the prepare script.
 """
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Callable
 
 import duckdb
 from dagster import (
+    AssetCheckResult,
+    AssetCheckSpec,
     AssetExecutionContext,
     AssetKey,
     AssetSpec,
@@ -43,6 +49,9 @@ class ReferenceSource:
     schema: str
     table: str
     archive_hint: str  # what the prepare script needs, for the error message
+    key_column: str  # must be non-null in every prepared row
+    min_rows: int  # row-count floor — far below this means a truncated file
+    required_columns: tuple  # the columns the staging contract reads
 
 
 REFERENCE_SOURCES = [
@@ -54,6 +63,15 @@ REFERENCE_SOURCES = [
         schema="raw_geo",
         table="onspd_postcodes",
         archive_hint="an ONSPD snapshot zip from geoportal.statistics.gov.uk",
+        key_column="postcode",
+        min_rows=2_000_000,  # full ONSPD ≈ 2.7M postcodes
+        required_columns=(
+            "postcode", "postcode_outward", "postcode_area", "area_id",
+            "area_name", "lsoa_code", "local_authority_code",
+            "local_authority_name", "region", "latitude", "longitude",
+            "is_current_postcode", "source_snapshot_date", "source_name",
+            "source_url",
+        ),
     ),
     ReferenceSource(
         asset_name="warehouse_crime",
@@ -63,6 +81,9 @@ REFERENCE_SOURCES = [
         schema="raw_police",
         table="street_crime",
         archive_hint="a police bulk archive from data.police.uk/data",
+        key_column="lsoa_code",
+        min_rows=10_000_000,  # a year of E&W street crime ≈ 17M rows
+        required_columns=("lsoa_code", "crime_type", "month"),
     ),
     ReferenceSource(
         asset_name="warehouse_epc",
@@ -72,6 +93,12 @@ REFERENCE_SOURCES = [
         schema="raw_epc",
         table="certificates",
         archive_hint="an EPC bulk zip (GOV.UK One Login required)",
+        key_column="postcode",
+        min_rows=15_000_000,  # E&W domestic certificates ≈ 23.5M
+        required_columns=(
+            "postcode", "current_energy_rating", "current_energy_efficiency",
+            "property_type", "lodgement_date",
+        ),
     ),
     ReferenceSource(
         asset_name="warehouse_amenities",
@@ -81,6 +108,13 @@ REFERENCE_SOURCES = [
         schema="raw_amenities",
         table="area_access",
         archive_hint="a Geofabrik OSM extract (great-britain-latest.osm.pbf)",
+        key_column="area_id",
+        min_rows=7_000,  # one row per E&W MSOA (7,264)
+        required_columns=(
+            "area_id", "nearest_station_km", "nearest_supermarket_km",
+            "nearest_gp_km", "nearest_school_km", "nearest_greenspace_km",
+            "walkable_amenity_count",
+        ),
     ),
     ReferenceSource(
         asset_name="warehouse_constraints",
@@ -90,6 +124,12 @@ REFERENCE_SOURCES = [
         schema="raw_constraints",
         table="area_constraints",
         archive_hint="planning.data.gov.uk constraint CSVs",
+        key_column="area_id",
+        min_rows=7_000,  # one row per MSOA incl. Scottish spillover (8,601)
+        required_columns=(
+            "area_id", "planning_constraint_count", "flood_postcode_pct",
+            "flood_risk_flag",
+        ),
     ),
 ]
 
@@ -112,19 +152,73 @@ def _prepared_file_spec(src: ReferenceSource) -> AssetSpec:
     )
 
 
+def _validate_prepared_file(src: ReferenceSource, prepared) -> AssetCheckResult:
+    """The pre-load gate: run BEFORE the drop-and-recreate loader."""
+    con = duckdb.connect(":memory:")
+    try:
+        csv = prepared.as_posix()
+        columns = {
+            row[0]
+            for row in con.execute(
+                f"describe select * from read_csv_auto('{csv}')"
+            ).fetchall()
+        }
+        missing_columns = sorted(set(src.required_columns) - columns)
+        row_count, key_nulls = 0, 0
+        if not missing_columns:
+            row_count, key_nulls = con.execute(
+                f"""
+                select count(*),
+                       count(*) filter (where "{src.key_column}" is null)
+                from read_csv_auto('{csv}')
+                """
+            ).fetchone()
+    finally:
+        con.close()
+
+    passed = (
+        not missing_columns
+        and row_count >= src.min_rows
+        and key_nulls == 0
+    )
+    return AssetCheckResult(
+        check_name="prepared_file_is_sane",
+        passed=passed,
+        metadata={
+            "row_count": row_count,
+            "min_expected_rows": src.min_rows,
+            "missing_columns": missing_columns,
+            "key_column": src.key_column,
+            "key_nulls": key_nulls,
+        },
+    )
+
+
 def _build_load_asset(src: ReferenceSource, upstream: AssetSpec) -> AssetsDefinition:
     @asset(
         name=src.asset_name,
         group_name="ingest",
         compute_kind="duckdb",
         deps=[upstream.key],
+        check_specs=[
+            AssetCheckSpec(
+                name="prepared_file_is_sane",
+                asset=AssetKey([src.asset_name]),
+                description=(
+                    "Row-count floor, required columns, and key non-null on "
+                    f"data/raw/{src.prepared_file} — evaluated BEFORE the "
+                    "drop-and-recreate load so a bad file cannot replace a "
+                    "good table."
+                ),
+            )
+        ],
         description=(
             f"`data/raw/{src.prepared_file}` loaded into "
             f"{src.schema}.{src.table} by scripts/{src.loader_module}.py — the "
             f"dbt source read when building with the real-source vars."
         ),
     )
-    def _load(context: AssetExecutionContext) -> MaterializeResult:
+    def _load(context: AssetExecutionContext):
         prepared = DATA_DIR / "raw" / src.prepared_file
         if not prepared.exists():
             raise FileNotFoundError(
@@ -132,6 +226,15 @@ def _build_load_asset(src: ReferenceSource, upstream: AssetSpec) -> AssetsDefini
                 f"scripts/{src.prepare_script} (needs {src.archive_hint}). "
                 "The load script would no-op here; the orchestrated asset "
                 "fails instead so a skipped source is visible."
+            )
+
+        gate = _validate_prepared_file(src, prepared)
+        yield gate
+        if not gate.passed:
+            raise RuntimeError(
+                f"prepared_file_is_sane failed for {prepared.name} "
+                f"({gate.metadata}) — load aborted before the destructive "
+                f"drop of {src.schema}.{src.table}."
             )
 
         loader = load_script(src.loader_module)
@@ -150,7 +253,7 @@ def _build_load_asset(src: ReferenceSource, upstream: AssetSpec) -> AssetsDefini
             con.close()
 
         context.log.info(f"{src.schema}.{src.table} now holds {row_count:,} rows")
-        return MaterializeResult(
+        yield MaterializeResult(
             metadata={
                 "row_count": row_count,
                 "table": f"{src.schema}.{src.table}",

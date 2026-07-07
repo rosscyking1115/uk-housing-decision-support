@@ -14,6 +14,7 @@ prepared_crime ──────► warehouse_crime ─────┤       bu
 prepared_epc ────────► warehouse_epc ───────┤
 prepared_amenities ──► warehouse_amenities ─┤
 prepared_constraints ► warehouse_constraints┘
+      └─ each: gate prepared_file_is_sane (pre-load)
 ```
 
 All **six sources** are wired. The Land Registry spine is fully automated
@@ -43,18 +44,28 @@ disconnected from the graph. Plain `dbt build` (CI) keeps the fixture default.
 - **DuckDB stays** — the data (4.99M Land Registry rows, 2021–2025) fits on one
   machine. No Snowflake/Spark; that would be cost and ops for no gain.
 - **The genuinely new layer is the ingestion gate.** dbt tests run *after* load;
-  `raw_landreg_ppd_is_sane` runs on the raw parquet *before* it enters the
-  warehouse, catching a truncated file / null flood / malformed-postcode wave at
-  the front door. It is a **blocking** check — a failure halts the graph.
+  the gates run *before*. `raw_landreg_ppd_is_sane` validates the raw parquet
+  (row-count floor, null flood, malformed-postcode rate) before it enters the
+  warehouse. Each reference source carries `prepared_file_is_sane` (row floor,
+  required columns, key non-null) evaluated **before the drop-and-recreate
+  load** — the loaders replace their table wholesale, so without the gate a
+  truncated prepared file would destroy a good table. A failed gate halts the
+  graph.
+- **Freshness is declared, honestly.** `warehouse_transactions` and
+  `decision_extract` carry a `FreshnessPolicy` (warn 35 days / fail 90 —
+  mirroring dbt's source-freshness config), and a monthly `ScheduleDefinition`
+  exists for `full_refresh` but ships **switched off**: the reference-source
+  archives are fetched manually, so an unattended cron would be theatre. The
+  cadence is documented in code; turning it on is one toggle.
 
 ## Layout
 
 | File | What it holds |
 | --- | --- |
-| `definitions.py` | The `Definitions` — assets, the ingestion check, the dbt resource. |
+| `definitions.py` | The `Definitions` — assets, checks, the `full_refresh` job, the (stopped) monthly schedule. |
 | `resources.py` | Paths, real-source vars, the `DbtProject`/`DbtCliResource`, `load_script()`. |
-| `ingest_assets.py` | `raw_landreg_ppd`, `warehouse_transactions` (the automated Land Registry spine). |
-| `reference_assets.py` | The five reference sources: external prepared-file specs + `warehouse_*` load assets. |
+| `ingest_assets.py` | `raw_landreg_ppd`, `warehouse_transactions` (the automated Land Registry spine + freshness policy). |
+| `reference_assets.py` | The five reference sources: external prepared-file specs + gated `warehouse_*` load assets. |
 | `dbt_assets.py` | `@dbt_assets` — the whole dbt project as one asset set, built with real-source vars. |
 | `export_assets.py` | `decision_extract` — export the two decision marts to the API extract. |
 | `checks.py` | `raw_landreg_ppd_is_sane` — the ingestion gate. |
@@ -77,6 +88,12 @@ manually, so the refresh runs on demand.
 Once `decision_extract` writes `data/decision.duckdb`, committing that file to
 `main` triggers the existing deploy half of the refresh
 (`.github/workflows/refresh.yml` → Fly + Vercel).
+
+CI guards this package with `tests/test_orchestration.py`: it loads the real
+`Definitions` (parsing the dbt manifest with the real-source vars on demand)
+and asserts the source-remap lineage, the job coverage, and the registered
+gates — so an import error or a broken remap fails the PR instead of surfacing
+at the next `dagster dev`.
 
 ### Config
 

@@ -6,7 +6,9 @@ been refreshed. Committing that file to main is what triggers the existing
 .github/workflows/refresh.yml deploy — this asset produces its input.
 """
 
-from dagster import AssetExecutionContext, MaterializeResult, asset
+from datetime import timedelta
+
+from dagster import AssetExecutionContext, FreshnessPolicy, MaterializeResult, asset
 from dagster_dbt import get_asset_key_for_model
 
 from .dbt_assets import movein_dbt_models
@@ -20,6 +22,11 @@ from .resources import DATA_DIR, load_script
         get_asset_key_for_model([movein_dbt_models], "rpt_neighbourhood_score"),
         get_asset_key_for_model([movein_dbt_models], "rpt_area_profile_mvp"),
     ],
+    # The extract the API serves goes stale on the same monthly cadence as the
+    # sources feeding it — same thresholds as the warehouse spine.
+    freshness_policy=FreshnessPolicy.time_window(
+        fail_window=timedelta(days=90), warn_window=timedelta(days=35)
+    ),
     description=(
         "Export rpt_neighbourhood_score + rpt_area_profile_mvp from the "
         "warehouse into data/decision.duckdb — the slim read-only extract the "

@@ -6,12 +6,14 @@ the ordering explicit and records materialization metadata. Both scripts are
 idempotent, so re-materializing is safe.
 """
 
+from datetime import timedelta
 from typing import Optional
 
 import duckdb
 from dagster import (
     AssetExecutionContext,
     Config,
+    FreshnessPolicy,
     MaterializeResult,
     MetadataValue,
     asset,
@@ -70,6 +72,11 @@ def raw_landreg_ppd(
     group_name="ingest",
     compute_kind="duckdb",
     deps=[raw_landreg_ppd],
+    # Mirrors the dbt source-freshness config on landreg.transactions
+    # (warn_after 35 days, error_after 90 — Land Registry publishes monthly).
+    freshness_policy=FreshnessPolicy.time_window(
+        fail_window=timedelta(days=90), warn_window=timedelta(days=35)
+    ),
     description=(
         "Every pp-*.parquet loaded into raw_landreg.transactions in "
         "warehouse.duckdb — the dbt source `landreg.transactions` reads this."
