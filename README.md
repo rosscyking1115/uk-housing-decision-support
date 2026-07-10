@@ -67,11 +67,11 @@ see the roadmap.)
 | `data/` | Local DuckDB warehouse + the committed `decision.duckdb` extract the API ships. |
 | `DEPLOY.md` | Runbook for deploying the API (Fly.io) and website (Vercel). |
 
-The four planning docs at the repo root carry the full reasoning:
-[`PROJECT_AUDIT_AND_HOUSING_FIT.md`](PROJECT_AUDIT_AND_HOUSING_FIT.md),
-[`HOUSING_DECISION_SUPPORT_BUILD_PLAN.md`](HOUSING_DECISION_SUPPORT_BUILD_PLAN.md),
-[`HOUSING_AREA_PROFILE_CONTRACT.md`](HOUSING_AREA_PROFILE_CONTRACT.md),
-[`HOUSING_DECISION_SUPPORT_DATA_SOURCES.md`](HOUSING_DECISION_SUPPORT_DATA_SOURCES.md).
+Two reference docs at the repo root carry the modelling detail:
+[`HOUSING_AREA_PROFILE_CONTRACT.md`](HOUSING_AREA_PROFILE_CONTRACT.md) (the
+per-area output contract) and
+[`HOUSING_DECISION_SUPPORT_DATA_SOURCES.md`](HOUSING_DECISION_SUPPORT_DATA_SOURCES.md)
+(every source, its licence, and its coverage).
 
 ## The data engine
 
@@ -249,8 +249,6 @@ Analytics-engineering improvements planned (deepening the modelling):
 - A **snapshot** (SCD-2) of ONS rent across data vintages.
 - Door-to-door **commute time** as an additional indicator (station proximity is
   already covered).
-
-Historical product framing is preserved in [`PRODUCT_ROADMAP.md`](PRODUCT_ROADMAP.md).
 
 ## Source attribution
 
