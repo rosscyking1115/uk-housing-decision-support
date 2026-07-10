@@ -71,4 +71,10 @@ Thumbs.db
 /PROJECT-2-KIT.md
 /PROJECT_AUDIT_AND_HOUSING_FIT.md
 /UK_COVERAGE_EXPANSION_PLAN.md
+/PRODUCT_ROADMAP.md
+/PROJECT_PLAYBOOK.md
+/SCOTLAND_DISCOVERY_SPIKE.md
 /mobile/DESIGN_HANDOFF.md
+
+# Local Claude Code session config (launch configs, settings).
+.claude/

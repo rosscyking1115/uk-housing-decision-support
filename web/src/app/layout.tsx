@@ -34,9 +34,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${display.variable} ${sans.variable} ${mono.variable} h-full`}
     >
       <body className="flex min-h-full flex-col bg-paper text-ink">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <SiteHeader />
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">{children}</main>
         <SiteFooter />
       </body>
     </html>
