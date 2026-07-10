@@ -65,3 +65,10 @@ Thumbs.db
 .env
 .env.local
 *.pem
+
+# internal working docs — kept local, not for the public repo
+/HOUSING_DECISION_SUPPORT_BUILD_PLAN.md
+/PROJECT-2-KIT.md
+/PROJECT_AUDIT_AND_HOUSING_FIT.md
+/UK_COVERAGE_EXPANSION_PLAN.md
+/mobile/DESIGN_HANDOFF.md
