@@ -17,7 +17,8 @@ the dimensional + decision modelling, the tests, and the explainability layer**.
 > area-data space is already well served (CrystalRoof, Plumplot, PostcodeCheck, …).
 > It's an end-to-end data stack built over official open data.
 >
-> *MoveIn* is the working name; `movein` is the repository.
+> **MoveIn** is the web app; `uk-housing-decision-support` is the repository (the
+> analytics-engineering project behind it).
 
 [![CI](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
