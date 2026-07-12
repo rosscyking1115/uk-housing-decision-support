@@ -19,10 +19,17 @@ the dimensional + decision modelling, the tests, and the explainability layer**.
 >
 > *MoveIn* is the working name; `movein` is the repository.
 
-[![CI](https://github.com/rosscyking1115/movein/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/movein/actions/workflows/ci.yml)
+[![CI](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 
 ![MoveIn homepage — every 0–100 score shown beside the raw figure behind it (rent, crime rate, EPC), laid out like a surveyor's trade-off receipt](.github/assets/hero.png)
+
+> One of three UK open-data builds on my profile — siblings
+> [tfl-data-engineering](https://github.com/rosscyking1115/tfl-data-engineering)
+> (Spark/Airflow/MCP at scale) and
+> [community-energy-flex](https://github.com/rosscyking1115/community-energy-flex)
+> (a decision system with LP/MILP optimisation and a forecast-vs-actual retro).
+> Full project map → [profile](https://github.com/rosscyking1115).
 
 ## Live
 
@@ -30,7 +37,7 @@ the dimensional + decision modelling, the tests, and the explainability layer**.
 |---|---|
 | 🌐 **MoveIn website** (Next.js / Vercel) | https://uk-housing-decision-support.vercel.app |
 | ⚙️ **API** (FastAPI / Fly.io) — OpenAPI docs | https://uk-housing-decision-support-api.fly.dev/docs |
-| 📊 **dbt docs** (lineage + column catalogue) | https://rosscyking1115.github.io/movein/ |
+| 📊 **dbt docs** (lineage + column catalogue) | https://rosscyking1115.github.io/uk-housing-decision-support/ |
 
 ## Architecture
 
@@ -170,8 +177,8 @@ production would be theatre. Details and trade-offs in
 ### 1. The engine (dbt + DuckDB)
 
 ```bash
-git clone https://github.com/rosscyking1115/movein.git
-cd movein
+git clone https://github.com/rosscyking1115/uk-housing-decision-support.git
+cd uk-housing-decision-support
 python -m venv .venv
 # Windows: .\.venv\Scripts\Activate.ps1   |  macOS/Linux: source .venv/bin/activate
 python -m pip install --upgrade pip && pip install -r requirements.txt
