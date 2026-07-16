@@ -36,7 +36,7 @@ exposures:
     label: "Decision DuckDB extract"
     type: application
     maturity: high
-    url: https://github.com/rosscyking1115/uk-housing-decision-support/blob/main/data/decision.duckdb
+    url: https://github.com/rosscyking1115/england-wales-housing-decision-support/blob/main/data/decision.duckdb
     description: |
       The slim read-only DuckDB delivery artifact assembled from both decision
       marts by scripts/build_decision_db.py and consumed by the API.
