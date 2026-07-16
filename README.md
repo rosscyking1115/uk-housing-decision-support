@@ -18,10 +18,10 @@ the dimensional + decision modelling, the tests, and the explainability layer**.
 > It's an end-to-end data stack built over official open data.
 >
 > The website and repository now share one descriptive identity: **England &
-> Wales Housing Decision Support**. The repository slug remains
-> `uk-housing-decision-support`.
+> Wales Housing Decision Support**. The repository slug is
+> `england-wales-housing-decision-support`.
 
-[![CI](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/uk-housing-decision-support/actions/workflows/ci.yml)
+[![CI](https://github.com/rosscyking1115/england-wales-housing-decision-support/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rosscyking1115/england-wales-housing-decision-support/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-informational.svg)](LICENSE)
 
 ![England & Wales Housing Decision Support homepage — every 0–100 score shown beside the raw figure behind it, laid out like a surveyor's trade-off receipt](.github/assets/hero.png)
@@ -39,7 +39,7 @@ the dimensional + decision modelling, the tests, and the explainability layer**.
 |---|---|
 | 🌐 **Housing decision-support website** (Next.js / Vercel) | https://uk-housing-decision-support.vercel.app |
 | ⚙️ **API** (FastAPI / Fly.io) — OpenAPI docs | https://uk-housing-decision-support-api.fly.dev/docs |
-| 📊 **dbt docs** (lineage + column catalogue) | https://rosscyking1115.github.io/uk-housing-decision-support/ |
+| 📊 **dbt docs** (lineage + column catalogue) | https://rosscyking1115.github.io/england-wales-housing-decision-support/ |
 
 ## Architecture
 
@@ -186,8 +186,8 @@ production would be theatre. Details and trade-offs in
 ### 1. The engine (dbt + DuckDB)
 
 ```bash
-git clone https://github.com/rosscyking1115/uk-housing-decision-support.git
-cd uk-housing-decision-support
+git clone https://github.com/rosscyking1115/england-wales-housing-decision-support.git
+cd england-wales-housing-decision-support
 python -m venv .venv
 # Windows: .\.venv\Scripts\Activate.ps1   |  macOS/Linux: source .venv/bin/activate
 python -m pip install --upgrade pip && pip install -r requirements.txt
