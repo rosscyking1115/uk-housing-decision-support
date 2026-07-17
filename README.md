@@ -228,10 +228,10 @@ source-freshness, sqlfluff, and the web lint/test/build checks.
 | Layer | Count | What it catches |
 |---|---|---|
 | Source freshness | 1 | Stale upstream data (warn if nothing newer than 35 days). |
-| Built-in row-shape | 146 | Schema bugs, FK orphans, enum drift, contract violations. |
-| `dbt-utils` | 21 | Sign/range invariants, multi-column uniqueness, score bounds. |
+| Built-in row-shape | 162 | Schema bugs, FK orphans, enum drift, contract violations. |
+| `dbt-utils` | 22 | Sign/range invariants, multi-column uniqueness, score bounds. |
 | `dbt-expectations` | 14 | Type-cast bugs, statistical drift, format regressions. |
-| Singular (`tests/assert_*.sql`) | 20 | Domain anomalies, coverage, coherence, and cross-runtime golden cases. |
+| Singular (`tests/assert_*.sql`) | 24 | Domain anomalies, coverage, coherence, and cross-runtime golden cases. |
 | **dbt data-test total** | **222** | All passing on every `dbt build`. |
 | dbt **unit** tests | 2 | Model *logic* on mock inputs: enrichment (postcode parse + region join + filter) and the scoring maths (median-anchored min-max, geometric-mean floor, missing-component rule). |
 | API (`tests/test_api.py`) | 14 | Versioned OpenAPI contract, neutral comparison fields, search validation/re-rank, missing-data and jurisdiction coverage, mocked postcodes.io. |
