@@ -38,3 +38,16 @@ export function rate(value: number | null | undefined): string {
 export function ratingOrDash(value: string | null | undefined): string {
   return value && value.trim() ? value : "—";
 }
+
+/** Sample and period context required beside an area-level sale-price median. */
+export function salePriceEvidence(
+  salesCount: number | null | undefined,
+  referenceYear: number | null | undefined,
+  confidence: string | null | undefined,
+): string {
+  if (salesCount == null) return "—";
+  if (salesCount === 0) return "No matched sales";
+  const period = referenceYear == null ? "" : ` in ${referenceYear}`;
+  const label = confidence ? `; ${confidence}` : "";
+  return `${salesCount.toLocaleString("en-GB")} matched sales${period}${label}`;
+}

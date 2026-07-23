@@ -33,6 +33,8 @@ class Area(BaseModel):
     convenience_score: Optional[float] = None
     official_rent_monthly_gbp: Optional[float] = None
     median_sale_price_gbp: Optional[float] = None
+    sale_price_reference_year: Optional[int] = None
+    sales_count_latest_year: Optional[int] = None
     rent_source_grain: Optional[str] = None
     rent_reference_date: Optional[date] = None
     median_sale_price_confidence: Optional[str] = None

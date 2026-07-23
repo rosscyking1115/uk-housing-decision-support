@@ -44,6 +44,14 @@ models:
           Median sale price (GBP) over the latest year's matched Land Registry
           sales. Null when no sales matched the area. Read alongside
           median_sale_price_confidence.
+      - name: sale_price_reference_year
+        data_type: integer
+        description: >
+          Calendar year used for median_sale_price_gbp and
+          sales_count_latest_year. It is the configured Land Registry end year,
+          not a rolling observation date.
+        tests:
+          - not_null
       - name: sales_count_latest_year
         data_type: bigint
         description: Matched Land Registry sales in the configured latest year.

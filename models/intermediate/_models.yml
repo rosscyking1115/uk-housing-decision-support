@@ -35,12 +35,15 @@ models:
       materialized: ephemeral
     columns:
       - name: area_id
+        data_type: varchar
         description: MSOA code (grain). Grouped from the postcode→geography lookup.
         tests:
           - unique
       - name: sales_count_latest_year
+        data_type: bigint
         description: Matched Land Registry sales in the configured latest year.
       - name: median_sale_price_gbp
+        data_type: bigint
         description: Median sale price (GBP) over the latest year's matched sales.
 
   - name: int_area__energy

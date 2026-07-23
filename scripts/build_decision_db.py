@@ -35,22 +35,27 @@ TABLES_TO_EXPORT = [
 ]
 
 
-def main() -> int:
-    if not SOURCE_DB.exists():
+def build(*, source_db: Path = SOURCE_DB, target_db: Path = TARGET_DB) -> int:
+    """Export decision marts to a caller-selected DuckDB file.
+
+    Production uses the module defaults. Tests pass temporary paths so the
+    committed API extract is never modified during contract verification.
+    """
+    if not source_db.exists():
         print(
-            f"Source warehouse not found at {SOURCE_DB}.\n"
+            f"Source warehouse not found at {source_db}.\n"
             f"Run `dbt run` on the decision marts first.",
             file=sys.stderr,
         )
         return 1
 
-    if TARGET_DB.exists():
-        TARGET_DB.unlink()
-        print(f"Removed existing {TARGET_DB.name}")
+    if target_db.exists():
+        target_db.unlink()
+        print(f"Removed existing {target_db.name}")
 
-    print(f"Building {TARGET_DB.name} from {SOURCE_DB.name}...")
-    target = duckdb.connect(str(TARGET_DB))
-    target.execute(f"ATTACH '{SOURCE_DB.as_posix()}' AS source (READ_ONLY)")
+    print(f"Building {target_db.name} from {source_db.name}...")
+    target = duckdb.connect(str(target_db))
+    target.execute(f"ATTACH '{source_db.as_posix()}' AS source (READ_ONLY)")
     target.execute("CREATE SCHEMA IF NOT EXISTS app")
 
     total_rows = 0
@@ -66,9 +71,13 @@ def main() -> int:
     target.execute("DETACH source")
     target.close()
 
-    size_kb = TARGET_DB.stat().st_size / 1024
+    size_kb = target_db.stat().st_size / 1024
     print(f"\nDone. {total_rows:,} rows total, {size_kb:.1f} KB on disk.")
     return 0
+
+
+def main() -> int:
+    return build()
 
 
 if __name__ == "__main__":

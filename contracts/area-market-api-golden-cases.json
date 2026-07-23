@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "owner": "rpt_area_profile_mvp",
+  "metric": "area_sale_price_context",
+  "period": {
+    "sale_price_reference_year": 2025
+  },
+  "cases": [
+    {
+      "area_id": "E02006959",
+      "median_sale_price_gbp": 267295,
+      "sales_count_latest_year": 417,
+      "sale_price_reference_year": 2025,
+      "median_sale_price_confidence": "reliable"
+    },
+    {
+      "area_id": "E02003353",
+      "median_sale_price_gbp": 528000,
+      "sales_count_latest_year": 291,
+      "sale_price_reference_year": 2025,
+      "median_sale_price_confidence": "reliable"
+    }
+  ]
+}

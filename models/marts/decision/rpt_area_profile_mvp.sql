@@ -25,18 +25,14 @@ select
     area.local_authority_name,
     area.region,
     latest_market.median_sale_price_gbp,
+    cast({{ var('landreg_end_year') }} as integer) as sale_price_reference_year,
     coalesce(latest_market.sales_count_latest_year, 0)
         as sales_count_latest_year,
     -- Sample-depth confidence for the median: a median over a handful of
     -- transactions is an outlier magnet (prime-central areas can show a £13M
     -- median from 2 sales). Flag it instead of presenting it as fact.
-    case
-        when coalesce(latest_market.sales_count_latest_year, 0) = 0 then 'none'
-        when
-            latest_market.sales_count_latest_year
-            < {{ var('min_reliable_sale_sample') }} then 'indicative'
-        else 'reliable'
-    end as median_sale_price_confidence,
+    {{ market_confidence('latest_market.sales_count_latest_year') }}
+        as median_sale_price_confidence,
     rent.rent_monthly_gbp as official_rent_monthly_gbp,
     rent.rent_grain as rent_source_grain,
     rent.rent_period as rent_reference_date,

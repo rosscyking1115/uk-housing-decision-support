@@ -15,7 +15,8 @@
 --   mean_price_gbp        — arithmetic mean (sensitive to high-value tail)
 --   median_price_gbp      — robust middle (the metric most analysts cite)
 --   p10_price_gbp / p90   — 10th / 90th percentile bookends
---   prior_year_median     — same region, year-1 (LAG)
+--   prior_transferred_year — preceding observed year in the region
+--   prior_year_median     — same region, preceding observed year (LAG)
 --   median_yoy_pct        — % change in median vs. prior year
 --   mean_yoy_pct          — % change in mean vs. prior year
 --
@@ -48,7 +49,10 @@ with_prior_year as (
         ) as prior_year_median_price_gbp,
         lag(mean_price_gbp) over (
             partition by region order by transferred_year
-        ) as prior_year_mean_price_gbp
+        ) as prior_year_mean_price_gbp,
+        lag(transferred_year) over (
+            partition by region order by transferred_year
+        ) as prior_transferred_year
     from by_region_year
 
 )
@@ -61,11 +65,15 @@ select
     median_price_gbp,
     p10_price_gbp,
     p90_price_gbp,
+    prior_transferred_year,
     prior_year_median_price_gbp,
     prior_year_mean_price_gbp,
 
     -- YoY change rounded to 1 decimal place
     case
+        when
+            prior_transferred_year is null
+            or prior_transferred_year <> (transferred_year - 1) then null
         when prior_year_median_price_gbp is null then null
         else round(
             100.0
@@ -76,6 +84,9 @@ select
     end as median_yoy_pct,
 
     case
+        when
+            prior_transferred_year is null
+            or prior_transferred_year <> (transferred_year - 1) then null
         when prior_year_mean_price_gbp is null then null
         else round(
             100.0

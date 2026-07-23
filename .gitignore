@@ -28,6 +28,10 @@ data/*.parquet
 
 # Built dbt docs site (published to Pages from CI).
 docs/
+# Source ADRs are reviewed repository records, not generated dbt documentation.
+!docs/
+!docs/adr/
+!docs/adr/ADR-001-area-market-metric-contract.md
 
 # --- Dagster ---
 # `dagster dev` scratch home when DAGSTER_HOME is unset (auto-removed on clean exit).

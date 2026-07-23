@@ -45,6 +45,8 @@ export interface Area {
   convenience_score: number | null;
   official_rent_monthly_gbp: number | null;
   median_sale_price_gbp: number | null;
+  sale_price_reference_year: number | null;
+  sales_count_latest_year: number | null;
   rent_source_grain: string | null;
   rent_reference_date: string | null;
   median_sale_price_confidence: string | null;

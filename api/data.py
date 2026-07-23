@@ -25,6 +25,7 @@ _QUERY = """
         s.expected_component_count, s.evidence_quality_level,
         s.all_component_source_dates_known, s.evidence_quality_notes, s.why_this_area,
         p.official_rent_monthly_gbp, p.median_sale_price_gbp,
+        __sale_price_reference_year__, p.sales_count_latest_year,
         p.rent_source_grain, p.rent_reference_date, p.median_sale_price_confidence,
         p.rent_1bed_gbp, p.rent_2bed_gbp, p.rent_3bed_gbp, p.rent_4plus_gbp,
         p.epc_median_rating, p.crime_rate_per_1000, p.crime_record_count,
@@ -57,11 +58,37 @@ def clean(record: dict) -> dict:
     return out
 
 
+def _area_query(connection: duckdb.DuckDBPyConnection) -> str:
+    """Select the current area contract while reading an older extract safely.
+
+    The dbt owner is rpt_area_profile_mvp. Before a separately authorised data
+    refresh exports its new reference-year field, older committed extracts emit
+    null for that additive field rather than making the API unavailable.
+    """
+    columns = {
+        row[0]
+        for row in connection.execute(
+            """
+            select column_name
+            from information_schema.columns
+            where table_schema = 'app'
+              and table_name = 'rpt_area_profile_mvp'
+            """
+        ).fetchall()
+    }
+    reference_year = (
+        "p.sale_price_reference_year"
+        if "sale_price_reference_year" in columns
+        else "cast(null as integer)"
+    )
+    return _QUERY.replace("__sale_price_reference_year__", reference_year)
+
+
 @lru_cache(maxsize=1)
 def areas() -> pd.DataFrame:
     con = duckdb.connect(str(DB_PATH), read_only=True)
     try:
-        return con.execute(_QUERY).df()
+        return con.execute(_area_query(con)).df()
     finally:
         con.close()
 

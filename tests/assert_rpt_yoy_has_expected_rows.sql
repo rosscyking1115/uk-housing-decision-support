@@ -1,6 +1,7 @@
 -- Risk: a one-year sample can make YoY tests pass without exercising the
 --       LAG calculation at all. This test fails unless the report has at
---       least two years and every non-first year has YoY values.
+--       least two years and every year with an adjacent prior year has YoY
+--       values. A gap must remain null rather than comparing non-adjacent years.
 
 with summary as (
 
@@ -35,7 +36,7 @@ missing_yoy as (
     from {{ ref('rpt_price_yoy_by_region') }} as yoy
     cross join summary
     where
-        yoy.transferred_year > summary.first_year
+        yoy.prior_transferred_year = yoy.transferred_year - 1
         and (
             yoy.median_yoy_pct is null
             or yoy.mean_yoy_pct is null

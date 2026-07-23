@@ -2,21 +2,34 @@
 --       magnet (prime-central areas can show a £13M median from 2 sales). The
 --       profile must never present such a median as reliable market context.
 --
--- Fail rows: any area whose latest-year sales are below the reliability
--- threshold but whose median is still flagged 'reliable', or any area with a
--- non-null median that is left unflagged ('none').
+-- Fail rows: a zero-count area with a price or a non-'none' confidence; an
+-- indicative/reliable area with a null price; or a count/confidence mismatch.
 
 select
     area_id,
     sales_count_latest_year,
+    median_sale_price_gbp,
     median_sale_price_confidence
 from {{ ref('rpt_area_profile_mvp') }}
 where
     (
-        sales_count_latest_year < {{ var('min_reliable_sale_sample') }}
-        and median_sale_price_confidence = 'reliable'
+        sales_count_latest_year = 0
+        and (
+            median_sale_price_gbp is not null
+            or median_sale_price_confidence <> 'none'
+        )
     )
     or (
-        median_sale_price_gbp is not null
-        and median_sale_price_confidence = 'none'
+        sales_count_latest_year between 1 and {{ var('min_reliable_sale_sample') - 1 }}
+        and (
+            median_sale_price_gbp is null
+            or median_sale_price_confidence <> 'indicative'
+        )
+    )
+    or (
+        sales_count_latest_year >= {{ var('min_reliable_sale_sample') }}
+        and (
+            median_sale_price_gbp is null
+            or median_sale_price_confidence <> 'reliable'
+        )
     )

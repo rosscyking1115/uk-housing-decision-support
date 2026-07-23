@@ -51,14 +51,19 @@ models:
         description: 10th percentile sale price in GBP. Lower-end of the market.
       - name: p90_price_gbp
         description: 90th percentile sale price in GBP. Upper-end.
+      - name: prior_transferred_year
+        description: >
+          Preceding observed transfer year in this region. YoY values are
+          populated only when this equals transferred_year - 1.
       - name: prior_year_median_price_gbp
-        description: Median price for the same region in the prior year. NULL for the earliest configured year.
+        description: Median price for the preceding observed regional year. NULL without an adjacent prior year.
       - name: prior_year_mean_price_gbp
-        description: Mean price for the same region in the prior year. NULL for the earliest year.
+        description: Mean price for the preceding observed regional year. NULL without an adjacent prior year.
       - name: median_yoy_pct
         description: |
           Year-on-year % change in median price. Positive = appreciation,
-          negative = decline. Rounded to 1 decimal. NULL for first year.
+          negative = decline. Rounded to 1 decimal. NULL for the first year or
+          a gap in the regional annual series.
       - name: mean_yoy_pct
         description: Year-on-year % change in mean price. Same convention.
     tests:

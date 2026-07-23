@@ -2,7 +2,7 @@
 
 **A tested dbt + DuckDB pipeline that turns
 nine authoritative/open-data sources into explainable, documented neighbourhood
-indicators — with published lineage, 222 data tests + 2 dbt unit tests, and a
+indicators — with published lineage, 228 data tests + 2 dbt unit tests, and a
 reproducible fixture-to-full build.**
 
 The engine rolls fragmented public housing data up to a consistent MSOA grain
@@ -62,6 +62,23 @@ golden cases under [`contracts/`](contracts/). The dbt mart, API reweighting and
 TypeScript reweighting are kept in parity by tests.
 (A Streamlit MVP and an Expo mobile client were also built and are now parked;
 the maintenance policy closes the feature roadmap.)
+
+### Market metric catalogue
+
+| Metric | Declared owner and grain | Meaning and caveat |
+|---|---|---|
+| Area sale context | `rpt_area_profile_mvp` — one MSOA `area_id` | Latest configured-year matched-sale median, count, year and confidence state. It is **area context, not valuation**. |
+| Regional price change | `rpt_price_yoy_by_region` — region × `transferred_year` | Same-region change between consecutive calendar-year medians; absent prior year remains null. Analytical reporting only. |
+| Regional new-build premium | `rpt_new_build_premium` — region × `transferred_year` | New-build versus existing median for the same regional year; null when the existing-sale denominator is missing or zero. Analytical reporting only. |
+
+The metrics intentionally stay at their source-supported grains. The reference
+build does not infer an MSOA YoY rate or a property price from regional figures.
+
+**Worked area-contract example.** The API golden case for MSOA `E02006959`
+contains a matched-sale median of **£267,295**, from **417** matched sales in
+the configured **2025** reference year, with a `reliable` confidence state.
+That is evidence about the area's recorded-sale context in the test fixture —
+not a valuation of a home, forecast, or promise about a live extract refresh.
 
 ## Repository layout
 
@@ -199,7 +216,7 @@ mkdir -p ~/.dbt && cp profiles.yml.example ~/.dbt/profiles.yml   # one-time
 python scripts/download_raw.py     # --sample for a faster 2-year run
 python scripts/load_to_duckdb.py
 dbt seed
-dbt build --threads 1              # full warehouse + 222 data tests, < 5 min on a laptop
+dbt build --threads 1              # full warehouse + 228 data tests, < 5 min on a laptop
 ```
 
 ### 2. The API
@@ -222,7 +239,7 @@ deploying both services is covered in [`DEPLOY.md`](DEPLOY.md).
 ## Testing & CI
 
 `ci.yml` runs on every PR and gates `main` via branch protection: Python unit tests
-(incl. the API suite), `dbt build --threads 1` with **222 data tests + 2 unit tests**,
+(incl. the API suite), `dbt build --threads 1` with **228 data tests + 2 unit tests**,
 source-freshness, sqlfluff, and the web lint/test/build checks.
 
 | Layer | Count | What it catches |
@@ -231,8 +248,8 @@ source-freshness, sqlfluff, and the web lint/test/build checks.
 | Built-in row-shape | 162 | Schema bugs, FK orphans, enum drift, contract violations. |
 | `dbt-utils` | 22 | Sign/range invariants, multi-column uniqueness, score bounds. |
 | `dbt-expectations` | 14 | Type-cast bugs, statistical drift, format regressions. |
-| Singular (`tests/assert_*.sql`) | 24 | Domain anomalies, coverage, coherence, and cross-runtime golden cases. |
-| **dbt data-test total** | **222** | All passing on every `dbt build`. |
+| Singular (`tests/assert_*.sql`) | 30 | Domain anomalies, coverage, coherence, and cross-runtime golden cases. |
+| **dbt data-test total** | **228** | All passing on every `dbt build`. |
 | dbt **unit** tests | 2 | Model *logic* on mock inputs: enrichment (postcode parse + region join + filter) and the scoring maths (median-anchored min-max, geometric-mean floor, missing-component rule). |
 | API (`tests/test_api.py`) | 14 | Versioned OpenAPI contract, neutral comparison fields, search validation/re-rank, missing-data and jurisdiction coverage, mocked postcodes.io. |
 
